@@ -1,0 +1,4 @@
+#Sun Mar 30 10:06:03 BRT 2025
+base.0=/Users/chebas/Desktop/pi chatbot/chatbot/build/app/intermediates/dex/debug/mergeDexDebug/classes.dex
+path.0=classes.dex
+renamed.0=classes.dex

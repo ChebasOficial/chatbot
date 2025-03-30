@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="gcm_defaultSenderId" translatable="false">678040065414</string>
+    <string name="google_api_key" translatable="false">AIzaSyDN1yQSGF1p55ZirEWisxvziKSeEmawBWk</string>
+    <string name="google_app_id" translatable="false">1:678040065414:android:49246f8f10261188b0c807</string>
+    <string name="google_crash_reporting_api_key" translatable="false">AIzaSyDN1yQSGF1p55ZirEWisxvziKSeEmawBWk</string>
+    <string name="google_storage_bucket" translatable="false">chatbot-de18f.firebasestorage.app</string>
+    <string name="project_id" translatable="false">chatbot-de18f</string>
+</resources>
