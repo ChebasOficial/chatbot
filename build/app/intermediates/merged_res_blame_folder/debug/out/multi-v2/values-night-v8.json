@@ -4,7 +4,7 @@
             "outputFile": "com.example.chatbot.app-mergeDebugResources-12:/values-night-v8/values-night-v8.xml",
             "map": [
                 {
-                    "source": "/Users/chebas/Desktop/pi 4 semestre/chatbot_project/chatbot/android/app/src/main/res/values-night/styles.xml",
+                    "source": "/Users/chebas/Desktop/pi 4 semestre/chatbot/android/app/src/main/res/values-night/styles.xml",
                     "from": {
                         "startLines": "3,14",
                         "startColumns": "4,4",

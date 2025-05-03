@@ -1,8 +1,8 @@
 -- Merging decision tree log ---
 application
-INJECTED from /Users/chebas/Desktop/pi 4 semestre/chatbot_project/chatbot/android/app/src/main/AndroidManifest.xml:2:5-32:19
-MERGED from [:firebase_core] /Users/chebas/Desktop/pi 4 semestre/chatbot_project/chatbot/build/firebase_core/intermediates/merged_manifest/debug/AndroidManifest.xml:9:5-15:19
-MERGED from [:firebase_core] /Users/chebas/Desktop/pi 4 semestre/chatbot_project/chatbot/build/firebase_core/intermediates/merged_manifest/debug/AndroidManifest.xml:9:5-15:19
+INJECTED from /Users/chebas/Desktop/pi 4 semestre/chatbot/android/app/src/main/AndroidManifest.xml:2:5-32:19
+MERGED from [:firebase_core] /Users/chebas/Desktop/pi 4 semestre/chatbot/build/firebase_core/intermediates/merged_manifest/debug/AndroidManifest.xml:9:5-15:19
+MERGED from [:firebase_core] /Users/chebas/Desktop/pi 4 semestre/chatbot/build/firebase_core/intermediates/merged_manifest/debug/AndroidManifest.xml:9:5-15:19
 MERGED from [com.google.firebase:firebase-common:20.4.2] /Users/chebas/.gradle/caches/transforms-3/0f3b748e3e0116b10da63b5db6c97f3d/transformed/jetified-firebase-common-20.4.2/AndroidManifest.xml:22:5-39:19
 MERGED from [com.google.firebase:firebase-common:20.4.2] /Users/chebas/.gradle/caches/transforms-3/0f3b748e3e0116b10da63b5db6c97f3d/transformed/jetified-firebase-common-20.4.2/AndroidManifest.xml:22:5-39:19
 MERGED from [androidx.window:window:1.0.0-beta04] /Users/chebas/.gradle/caches/transforms-3/2f632d8dec5aedcc344894ac2d746d3d/transformed/jetified-window-1.0.0-beta04/AndroidManifest.xml:24:5-31:19
@@ -18,14 +18,14 @@ MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] /Users/cheb
 	android:appComponentFactory
 		ADDED from [androidx.core:core:1.6.0] /Users/chebas/.gradle/caches/transforms-3/72d701307b1115688b608c7110be19e8/transformed/core-1.6.0/AndroidManifest.xml:24:18-86
 	android:name
-		INJECTED from /Users/chebas/Desktop/pi 4 semestre/chatbot_project/chatbot/android/app/src/main/AndroidManifest.xml
+		INJECTED from /Users/chebas/Desktop/pi 4 semestre/chatbot/android/app/src/main/AndroidManifest.xml
 manifest
-ADDED from /Users/chebas/Desktop/pi 4 semestre/chatbot_project/chatbot/android/app/src/main/AndroidManifest.xml:1:1-33:12
-INJECTED from /Users/chebas/Desktop/pi 4 semestre/chatbot_project/chatbot/android/app/src/main/AndroidManifest.xml:1:1-33:12
-INJECTED from /Users/chebas/Desktop/pi 4 semestre/chatbot_project/chatbot/android/app/src/main/AndroidManifest.xml:1:1-33:12
-INJECTED from /Users/chebas/Desktop/pi 4 semestre/chatbot_project/chatbot/android/app/src/main/AndroidManifest.xml:1:1-33:12
-MERGED from /Users/chebas/Desktop/pi 4 semestre/chatbot_project/chatbot/android/app/src/main/AndroidManifest.xml:1:1-33:12
-MERGED from [:firebase_core] /Users/chebas/Desktop/pi 4 semestre/chatbot_project/chatbot/build/firebase_core/intermediates/merged_manifest/debug/AndroidManifest.xml:2:1-17:12
+ADDED from /Users/chebas/Desktop/pi 4 semestre/chatbot/android/app/src/main/AndroidManifest.xml:1:1-33:12
+INJECTED from /Users/chebas/Desktop/pi 4 semestre/chatbot/android/app/src/main/AndroidManifest.xml:1:1-33:12
+INJECTED from /Users/chebas/Desktop/pi 4 semestre/chatbot/android/app/src/main/AndroidManifest.xml:1:1-33:12
+INJECTED from /Users/chebas/Desktop/pi 4 semestre/chatbot/android/app/src/main/AndroidManifest.xml:1:1-33:12
+MERGED from /Users/chebas/Desktop/pi 4 semestre/chatbot/android/app/src/main/AndroidManifest.xml:1:1-33:12
+MERGED from [:firebase_core] /Users/chebas/Desktop/pi 4 semestre/chatbot/build/firebase_core/intermediates/merged_manifest/debug/AndroidManifest.xml:2:1-17:12
 MERGED from [com.google.firebase:firebase-common:20.4.2] /Users/chebas/.gradle/caches/transforms-3/0f3b748e3e0116b10da63b5db6c97f3d/transformed/jetified-firebase-common-20.4.2/AndroidManifest.xml:15:1-41:12
 MERGED from [androidx.window:window-java:1.0.0-beta04] /Users/chebas/.gradle/caches/transforms-3/234cf6cab2ae0df1de11d520bd41701d/transformed/jetified-window-java-1.0.0-beta04/AndroidManifest.xml:17:1-23:12
 MERGED from [androidx.window:window:1.0.0-beta04] /Users/chebas/.gradle/caches/transforms-3/2f632d8dec5aedcc344894ac2d746d3d/transformed/jetified-window-1.0.0-beta04/AndroidManifest.xml:17:1-33:12
@@ -47,29 +47,29 @@ MERGED from [androidx.arch.core:core-runtime:2.0.0] /Users/chebas/.gradle/caches
 MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] /Users/chebas/.gradle/caches/transforms-3/e5680a9c4e90194e3fe29a3c1f1dfc22/transformed/versionedparcelable-1.1.1/AndroidManifest.xml:17:1-27:12
 MERGED from [androidx.lifecycle:lifecycle-viewmodel:2.1.0] /Users/chebas/.gradle/caches/transforms-3/52e704e76e94699d1f433df04e7210d4/transformed/lifecycle-viewmodel-2.1.0/AndroidManifest.xml:17:1-22:12
 MERGED from [androidx.annotation:annotation-experimental:1.1.0] /Users/chebas/.gradle/caches/transforms-3/63de43c2f1d406e95d47893f129ee7b9/transformed/jetified-annotation-experimental-1.1.0/AndroidManifest.xml:17:1-24:12
-INJECTED from /Users/chebas/Desktop/pi 4 semestre/chatbot_project/chatbot/android/app/src/debug/AndroidManifest.xml:1:1-7:12
-INJECTED from /Users/chebas/Desktop/pi 4 semestre/chatbot_project/chatbot/android/app/src/debug/AndroidManifest.xml:1:1-7:12
-INJECTED from /Users/chebas/Desktop/pi 4 semestre/chatbot_project/chatbot/android/app/src/debug/AndroidManifest.xml:1:1-7:12
+INJECTED from /Users/chebas/Desktop/pi 4 semestre/chatbot/android/app/src/debug/AndroidManifest.xml:1:1-7:12
+INJECTED from /Users/chebas/Desktop/pi 4 semestre/chatbot/android/app/src/debug/AndroidManifest.xml:1:1-7:12
+INJECTED from /Users/chebas/Desktop/pi 4 semestre/chatbot/android/app/src/debug/AndroidManifest.xml:1:1-7:12
 	package
-		INJECTED from /Users/chebas/Desktop/pi 4 semestre/chatbot_project/chatbot/android/app/src/main/AndroidManifest.xml
-		ADDED from /Users/chebas/Desktop/pi 4 semestre/chatbot_project/chatbot/android/app/src/main/AndroidManifest.xml:1:1-33:12
-		INJECTED from /Users/chebas/Desktop/pi 4 semestre/chatbot_project/chatbot/android/app/src/debug/AndroidManifest.xml
+		INJECTED from /Users/chebas/Desktop/pi 4 semestre/chatbot/android/app/src/main/AndroidManifest.xml
+		ADDED from /Users/chebas/Desktop/pi 4 semestre/chatbot/android/app/src/main/AndroidManifest.xml:1:1-33:12
+		INJECTED from /Users/chebas/Desktop/pi 4 semestre/chatbot/android/app/src/debug/AndroidManifest.xml
 	android:versionName
-		INJECTED from /Users/chebas/Desktop/pi 4 semestre/chatbot_project/chatbot/android/app/src/main/AndroidManifest.xml
-		ADDED from /Users/chebas/Desktop/pi 4 semestre/chatbot_project/chatbot/android/app/src/main/AndroidManifest.xml:1:1-33:12
-		INJECTED from /Users/chebas/Desktop/pi 4 semestre/chatbot_project/chatbot/android/app/src/debug/AndroidManifest.xml
+		INJECTED from /Users/chebas/Desktop/pi 4 semestre/chatbot/android/app/src/main/AndroidManifest.xml
+		ADDED from /Users/chebas/Desktop/pi 4 semestre/chatbot/android/app/src/main/AndroidManifest.xml:1:1-33:12
+		INJECTED from /Users/chebas/Desktop/pi 4 semestre/chatbot/android/app/src/debug/AndroidManifest.xml
 	android:versionCode
-		INJECTED from /Users/chebas/Desktop/pi 4 semestre/chatbot_project/chatbot/android/app/src/main/AndroidManifest.xml
-		ADDED from /Users/chebas/Desktop/pi 4 semestre/chatbot_project/chatbot/android/app/src/main/AndroidManifest.xml:1:1-33:12
-		INJECTED from /Users/chebas/Desktop/pi 4 semestre/chatbot_project/chatbot/android/app/src/debug/AndroidManifest.xml
+		INJECTED from /Users/chebas/Desktop/pi 4 semestre/chatbot/android/app/src/main/AndroidManifest.xml
+		ADDED from /Users/chebas/Desktop/pi 4 semestre/chatbot/android/app/src/main/AndroidManifest.xml:1:1-33:12
+		INJECTED from /Users/chebas/Desktop/pi 4 semestre/chatbot/android/app/src/debug/AndroidManifest.xml
 	xmlns:android
-		ADDED from /Users/chebas/Desktop/pi 4 semestre/chatbot_project/chatbot/android/app/src/main/AndroidManifest.xml:1:11-69
+		ADDED from /Users/chebas/Desktop/pi 4 semestre/chatbot/android/app/src/main/AndroidManifest.xml:1:11-69
 uses-sdk
-INJECTED from /Users/chebas/Desktop/pi 4 semestre/chatbot_project/chatbot/android/app/src/main/AndroidManifest.xml reason: use-sdk injection requested
-INJECTED from /Users/chebas/Desktop/pi 4 semestre/chatbot_project/chatbot/android/app/src/main/AndroidManifest.xml
-INJECTED from /Users/chebas/Desktop/pi 4 semestre/chatbot_project/chatbot/android/app/src/main/AndroidManifest.xml
-MERGED from [:firebase_core] /Users/chebas/Desktop/pi 4 semestre/chatbot_project/chatbot/build/firebase_core/intermediates/merged_manifest/debug/AndroidManifest.xml:5:5-7:41
-MERGED from [:firebase_core] /Users/chebas/Desktop/pi 4 semestre/chatbot_project/chatbot/build/firebase_core/intermediates/merged_manifest/debug/AndroidManifest.xml:5:5-7:41
+INJECTED from /Users/chebas/Desktop/pi 4 semestre/chatbot/android/app/src/main/AndroidManifest.xml reason: use-sdk injection requested
+INJECTED from /Users/chebas/Desktop/pi 4 semestre/chatbot/android/app/src/main/AndroidManifest.xml
+INJECTED from /Users/chebas/Desktop/pi 4 semestre/chatbot/android/app/src/main/AndroidManifest.xml
+MERGED from [:firebase_core] /Users/chebas/Desktop/pi 4 semestre/chatbot/build/firebase_core/intermediates/merged_manifest/debug/AndroidManifest.xml:5:5-7:41
+MERGED from [:firebase_core] /Users/chebas/Desktop/pi 4 semestre/chatbot/build/firebase_core/intermediates/merged_manifest/debug/AndroidManifest.xml:5:5-7:41
 MERGED from [com.google.firebase:firebase-common:20.4.2] /Users/chebas/.gradle/caches/transforms-3/0f3b748e3e0116b10da63b5db6c97f3d/transformed/jetified-firebase-common-20.4.2/AndroidManifest.xml:19:5-44
 MERGED from [com.google.firebase:firebase-common:20.4.2] /Users/chebas/.gradle/caches/transforms-3/0f3b748e3e0116b10da63b5db6c97f3d/transformed/jetified-firebase-common-20.4.2/AndroidManifest.xml:19:5-44
 MERGED from [androidx.window:window-java:1.0.0-beta04] /Users/chebas/.gradle/caches/transforms-3/234cf6cab2ae0df1de11d520bd41701d/transformed/jetified-window-java-1.0.0-beta04/AndroidManifest.xml:19:5-21:41
@@ -112,20 +112,20 @@ MERGED from [androidx.lifecycle:lifecycle-viewmodel:2.1.0] /Users/chebas/.gradle
 MERGED from [androidx.lifecycle:lifecycle-viewmodel:2.1.0] /Users/chebas/.gradle/caches/transforms-3/52e704e76e94699d1f433df04e7210d4/transformed/lifecycle-viewmodel-2.1.0/AndroidManifest.xml:20:5-44
 MERGED from [androidx.annotation:annotation-experimental:1.1.0] /Users/chebas/.gradle/caches/transforms-3/63de43c2f1d406e95d47893f129ee7b9/transformed/jetified-annotation-experimental-1.1.0/AndroidManifest.xml:20:5-22:41
 MERGED from [androidx.annotation:annotation-experimental:1.1.0] /Users/chebas/.gradle/caches/transforms-3/63de43c2f1d406e95d47893f129ee7b9/transformed/jetified-annotation-experimental-1.1.0/AndroidManifest.xml:20:5-22:41
-INJECTED from /Users/chebas/Desktop/pi 4 semestre/chatbot_project/chatbot/android/app/src/debug/AndroidManifest.xml
-INJECTED from /Users/chebas/Desktop/pi 4 semestre/chatbot_project/chatbot/android/app/src/debug/AndroidManifest.xml
+INJECTED from /Users/chebas/Desktop/pi 4 semestre/chatbot/android/app/src/debug/AndroidManifest.xml
+INJECTED from /Users/chebas/Desktop/pi 4 semestre/chatbot/android/app/src/debug/AndroidManifest.xml
 	android:targetSdkVersion
-		INJECTED from /Users/chebas/Desktop/pi 4 semestre/chatbot_project/chatbot/android/app/src/main/AndroidManifest.xml
-		INJECTED from /Users/chebas/Desktop/pi 4 semestre/chatbot_project/chatbot/android/app/src/debug/AndroidManifest.xml
+		INJECTED from /Users/chebas/Desktop/pi 4 semestre/chatbot/android/app/src/main/AndroidManifest.xml
+		INJECTED from /Users/chebas/Desktop/pi 4 semestre/chatbot/android/app/src/debug/AndroidManifest.xml
 	android:minSdkVersion
-		INJECTED from /Users/chebas/Desktop/pi 4 semestre/chatbot_project/chatbot/android/app/src/main/AndroidManifest.xml
-		INJECTED from /Users/chebas/Desktop/pi 4 semestre/chatbot_project/chatbot/android/app/src/debug/AndroidManifest.xml
+		INJECTED from /Users/chebas/Desktop/pi 4 semestre/chatbot/android/app/src/main/AndroidManifest.xml
+		INJECTED from /Users/chebas/Desktop/pi 4 semestre/chatbot/android/app/src/debug/AndroidManifest.xml
 uses-permission#android.permission.INTERNET
-ADDED from /Users/chebas/Desktop/pi 4 semestre/chatbot_project/chatbot/android/app/src/debug/AndroidManifest.xml:6:5-66
+ADDED from /Users/chebas/Desktop/pi 4 semestre/chatbot/android/app/src/debug/AndroidManifest.xml:6:5-66
 	android:name
-		ADDED from /Users/chebas/Desktop/pi 4 semestre/chatbot_project/chatbot/android/app/src/debug/AndroidManifest.xml:6:22-64
+		ADDED from /Users/chebas/Desktop/pi 4 semestre/chatbot/android/app/src/debug/AndroidManifest.xml:6:22-64
 service#com.google.firebase.components.ComponentDiscoveryService
-ADDED from [:firebase_core] /Users/chebas/Desktop/pi 4 semestre/chatbot_project/chatbot/build/firebase_core/intermediates/merged_manifest/debug/AndroidManifest.xml:10:9-14:19
+ADDED from [:firebase_core] /Users/chebas/Desktop/pi 4 semestre/chatbot/build/firebase_core/intermediates/merged_manifest/debug/AndroidManifest.xml:10:9-14:19
 MERGED from [com.google.firebase:firebase-common:20.4.2] /Users/chebas/.gradle/caches/transforms-3/0f3b748e3e0116b10da63b5db6c97f3d/transformed/jetified-firebase-common-20.4.2/AndroidManifest.xml:30:9-38:19
 MERGED from [com.google.firebase:firebase-common:20.4.2] /Users/chebas/.gradle/caches/transforms-3/0f3b748e3e0116b10da63b5db6c97f3d/transformed/jetified-firebase-common-20.4.2/AndroidManifest.xml:30:9-38:19
 	android:exported
@@ -135,13 +135,13 @@ MERGED from [com.google.firebase:firebase-common:20.4.2] /Users/chebas/.gradle/c
 	android:directBootAware
 		ADDED from [com.google.firebase:firebase-common:20.4.2] /Users/chebas/.gradle/caches/transforms-3/0f3b748e3e0116b10da63b5db6c97f3d/transformed/jetified-firebase-common-20.4.2/AndroidManifest.xml:32:13-43
 	android:name
-		ADDED from [:firebase_core] /Users/chebas/Desktop/pi 4 semestre/chatbot_project/chatbot/build/firebase_core/intermediates/merged_manifest/debug/AndroidManifest.xml:10:18-89
+		ADDED from [:firebase_core] /Users/chebas/Desktop/pi 4 semestre/chatbot/build/firebase_core/intermediates/merged_manifest/debug/AndroidManifest.xml:10:18-89
 meta-data#com.google.firebase.components:io.flutter.plugins.firebase.core.FlutterFirebaseCoreRegistrar
-ADDED from [:firebase_core] /Users/chebas/Desktop/pi 4 semestre/chatbot_project/chatbot/build/firebase_core/intermediates/merged_manifest/debug/AndroidManifest.xml:11:13-13:85
+ADDED from [:firebase_core] /Users/chebas/Desktop/pi 4 semestre/chatbot/build/firebase_core/intermediates/merged_manifest/debug/AndroidManifest.xml:11:13-13:85
 	android:value
-		ADDED from [:firebase_core] /Users/chebas/Desktop/pi 4 semestre/chatbot_project/chatbot/build/firebase_core/intermediates/merged_manifest/debug/AndroidManifest.xml:13:17-82
+		ADDED from [:firebase_core] /Users/chebas/Desktop/pi 4 semestre/chatbot/build/firebase_core/intermediates/merged_manifest/debug/AndroidManifest.xml:13:17-82
 	android:name
-		ADDED from [:firebase_core] /Users/chebas/Desktop/pi 4 semestre/chatbot_project/chatbot/build/firebase_core/intermediates/merged_manifest/debug/AndroidManifest.xml:12:17-124
+		ADDED from [:firebase_core] /Users/chebas/Desktop/pi 4 semestre/chatbot/build/firebase_core/intermediates/merged_manifest/debug/AndroidManifest.xml:12:17-124
 provider#com.google.firebase.provider.FirebaseInitProvider
 ADDED from [com.google.firebase:firebase-common:20.4.2] /Users/chebas/.gradle/caches/transforms-3/0f3b748e3e0116b10da63b5db6c97f3d/transformed/jetified-firebase-common-20.4.2/AndroidManifest.xml:23:9-28:39
 	android:authorities

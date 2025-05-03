@@ -13,8 +13,8 @@
 13         to allow setting breakpoints, to provide hot reload, etc.
 14    -->
 15    <uses-permission android:name="android.permission.INTERNET" />
-15-->/Users/chebas/Desktop/pi 4 semestre/chatbot_project/chatbot/android/app/src/debug/AndroidManifest.xml:6:5-66
-15-->/Users/chebas/Desktop/pi 4 semestre/chatbot_project/chatbot/android/app/src/debug/AndroidManifest.xml:6:22-64
+15-->/Users/chebas/Desktop/pi 4 semestre/chatbot/android/app/src/debug/AndroidManifest.xml:6:5-66
+15-->/Users/chebas/Desktop/pi 4 semestre/chatbot/android/app/src/debug/AndroidManifest.xml:6:22-64
 16
 17    <application
 18        android:name="android.app.Application"
@@ -57,19 +57,19 @@
 54            android:value="2" />
 55
 56        <service
-56-->[:firebase_core] /Users/chebas/Desktop/pi 4 semestre/chatbot_project/chatbot/build/firebase_core/intermediates/merged_manifest/debug/AndroidManifest.xml:10:9-14:19
+56-->[:firebase_core] /Users/chebas/Desktop/pi 4 semestre/chatbot/build/firebase_core/intermediates/merged_manifest/debug/AndroidManifest.xml:10:9-14:19
 57            android:name="com.google.firebase.components.ComponentDiscoveryService"
-57-->[:firebase_core] /Users/chebas/Desktop/pi 4 semestre/chatbot_project/chatbot/build/firebase_core/intermediates/merged_manifest/debug/AndroidManifest.xml:10:18-89
+57-->[:firebase_core] /Users/chebas/Desktop/pi 4 semestre/chatbot/build/firebase_core/intermediates/merged_manifest/debug/AndroidManifest.xml:10:18-89
 58            android:directBootAware="true"
 58-->[com.google.firebase:firebase-common:20.4.2] /Users/chebas/.gradle/caches/transforms-3/0f3b748e3e0116b10da63b5db6c97f3d/transformed/jetified-firebase-common-20.4.2/AndroidManifest.xml:32:13-43
 59            android:exported="false" >
 59-->[com.google.firebase:firebase-common:20.4.2] /Users/chebas/.gradle/caches/transforms-3/0f3b748e3e0116b10da63b5db6c97f3d/transformed/jetified-firebase-common-20.4.2/AndroidManifest.xml:33:13-37
 60            <meta-data
-60-->[:firebase_core] /Users/chebas/Desktop/pi 4 semestre/chatbot_project/chatbot/build/firebase_core/intermediates/merged_manifest/debug/AndroidManifest.xml:11:13-13:85
+60-->[:firebase_core] /Users/chebas/Desktop/pi 4 semestre/chatbot/build/firebase_core/intermediates/merged_manifest/debug/AndroidManifest.xml:11:13-13:85
 61                android:name="com.google.firebase.components:io.flutter.plugins.firebase.core.FlutterFirebaseCoreRegistrar"
-61-->[:firebase_core] /Users/chebas/Desktop/pi 4 semestre/chatbot_project/chatbot/build/firebase_core/intermediates/merged_manifest/debug/AndroidManifest.xml:12:17-124
+61-->[:firebase_core] /Users/chebas/Desktop/pi 4 semestre/chatbot/build/firebase_core/intermediates/merged_manifest/debug/AndroidManifest.xml:12:17-124
 62                android:value="com.google.firebase.components.ComponentRegistrar" />
-62-->[:firebase_core] /Users/chebas/Desktop/pi 4 semestre/chatbot_project/chatbot/build/firebase_core/intermediates/merged_manifest/debug/AndroidManifest.xml:13:17-82
+62-->[:firebase_core] /Users/chebas/Desktop/pi 4 semestre/chatbot/build/firebase_core/intermediates/merged_manifest/debug/AndroidManifest.xml:13:17-82
 63            <meta-data
 63-->[com.google.firebase:firebase-common:20.4.2] /Users/chebas/.gradle/caches/transforms-3/0f3b748e3e0116b10da63b5db6c97f3d/transformed/jetified-firebase-common-20.4.2/AndroidManifest.xml:35:13-37:85
 64                android:name="com.google.firebase.components:com.google.firebase.FirebaseCommonKtxRegistrar"
