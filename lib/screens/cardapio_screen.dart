@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+// Importa a tela que será usada como conteúdo do popup
+import 'yes_no_confirmation_screen.dart'; // Certifique-se que o caminho está correto
 
 class CardapioScreen extends StatefulWidget {
   const CardapioScreen({super.key});
@@ -8,8 +10,6 @@ class CardapioScreen extends StatefulWidget {
 }
 
 class _CardapioScreenState extends State<CardapioScreen> {
-  // Removed unused _selectedItems map
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -19,7 +19,7 @@ class _CardapioScreenState extends State<CardapioScreen> {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.black54),
-          onPressed: () => Navigator.of(context).pop(), // Go back to Login
+          onPressed: () => Navigator.of(context).pop(), // Volta para Login
         ),
         title: const Text('Cardápio',
             style:
@@ -29,7 +29,7 @@ class _CardapioScreenState extends State<CardapioScreen> {
           IconButton(
             icon:
                 const Icon(Icons.shopping_cart_outlined, color: Colors.black54),
-            onPressed: () {/* Navigate to cart or show summary */},
+            onPressed: () {/* Navega para o carrinho ou mostra resumo */},
           ),
         ],
       ),
@@ -45,7 +45,7 @@ class _CardapioScreenState extends State<CardapioScreen> {
                     const SizedBox(height: 20),
                     Center(
                       child: Image.network(
-                        'https://via.placeholder.com/80',
+                        'https://via.placeholder.com/80', // Imagem de exemplo
                         height: 80,
                         errorBuilder: (context, error, stackTrace) =>
                             const Icon(Icons.fastfood,
@@ -67,9 +67,19 @@ class _CardapioScreenState extends State<CardapioScreen> {
                 child: Column(
                   children: [
                     ElevatedButton(
+                      // --- onPressed MODIFICADO ---
                       onPressed: () {
-                        // Navigate to Coluna Selection screen
-                        Navigator.pushNamed(context, '/confirmation_ok');
+                        showDialog(
+                          context: context,
+                          builder: (BuildContext dialogContext) {
+                            return Dialog(
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10.0),
+                              ),
+                              child: const YesNoConfirmationScreen(),
+                            );
+                          },
+                        );
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.grey[300],
@@ -85,7 +95,16 @@ class _CardapioScreenState extends State<CardapioScreen> {
                     ),
                     const SizedBox(height: 20),
                     Column(children: [
-                      Image.asset("lib/images/logo_pequeno.png"),
+                      // Garanta que o caminho da imagem está correto
+                      Image.asset(
+                        "lib/images/logo_pequeno.png",
+                        height: 40, // Ajuste a altura se necessário
+                        errorBuilder: (context, error, stackTrace) =>
+                            const Text('Logo',
+                                style:
+                                    TextStyle(color: Colors.grey)), // Fallback
+                      ),
+                      const SizedBox(height: 5),
                       const Text('Poliedro Colégio',
                           style: TextStyle(color: Colors.grey)),
                     ]),
