@@ -89,7 +89,7 @@ class YesNoConfirmationScreen extends StatelessWidget {
               ElevatedButton(
                 onPressed: () {
                   // Navigate to the Contact Message Screen
-                  Navigator.pushNamed(context, '/contact');
+                  Navigator.pushNamed(context, '/linha_coluna');
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.white,

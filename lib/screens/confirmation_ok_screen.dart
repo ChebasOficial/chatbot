@@ -61,7 +61,7 @@ class ConfirmationOkScreen extends StatelessWidget {
               ElevatedButton(
                 onPressed: () {
                   // Navigate to Linha/Coluna Selection Screen
-                  Navigator.pushNamed(context, '/linha_coluna');
+                  Navigator.pushNamed(context, '/yes_no');
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.white,

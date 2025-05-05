@@ -69,7 +69,7 @@ class _CardapioScreenState extends State<CardapioScreen> {
                     ElevatedButton(
                       onPressed: () {
                         // Navigate to Coluna Selection screen
-                        Navigator.pushNamed(context, '/coluna_selection');
+                        Navigator.pushNamed(context, '/confirmation_ok');
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.grey[300],

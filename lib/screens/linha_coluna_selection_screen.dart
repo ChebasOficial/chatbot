@@ -70,7 +70,7 @@ class LinhaColunaSelectionScreen extends StatelessWidget {
               ElevatedButton(
                 onPressed: () {
                   // Navigate to Yes/No Confirmation Screen
-                  Navigator.pushNamed(context, '/yes_no');
+                  Navigator.pushNamed(context, '/contact');
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.white,
