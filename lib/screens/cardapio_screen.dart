@@ -67,14 +67,15 @@ class _CardapioScreenState extends State<CardapioScreen> {
                 child: Column(
                   children: [
                     ElevatedButton(
-                      // --- onPressed MODIFICADO ---
+                      // --- onPressed
                       onPressed: () {
                         showDialog(
                           context: context,
                           builder: (BuildContext dialogContext) {
                             return Dialog(
+                              backgroundColor: Colors.transparent,
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10.0),
+                                borderRadius: BorderRadius.circular(1000),
                               ),
                               child: const YesNoConfirmationScreen(),
                             );
