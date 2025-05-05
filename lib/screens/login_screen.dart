@@ -12,7 +12,8 @@ class LoginScreen extends StatelessWidget {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.black54),
-          onPressed: () => Navigator.of(context).pop(), // Go back to previous screen (Inicio)
+          onPressed: () => Navigator.of(context)
+              .pop(), // Go back to previous screen (Inicio)
         ),
       ),
       body: SafeArea(
@@ -54,7 +55,8 @@ class LoginScreen extends StatelessWidget {
                   TextField(
                     decoration: InputDecoration(
                       prefixIcon: const Icon(Icons.phone_outlined),
-                      hintText: 'Telefone: (11) 91234-1234', // Placeholder text from image
+                      hintText:
+                          'Telefone: (11) 91234-1234', // Placeholder text from image
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10),
                         borderSide: BorderSide.none,
@@ -86,13 +88,12 @@ class LoginScreen extends StatelessWidget {
                 ],
               ),
               // Bottom Logo
-              const Column(
-                children: [
-                  // Placeholder for Poliedro Colégio Logo
-                  Icon(Icons.apps, size: 40, color: Colors.blue), // Placeholder logo
-                  Text('Poliedro Colégio', style: TextStyle(color: Colors.grey)),
-                ]
-              ),
+              Column(children: [
+                // Placeholder for Poliedro Colégio Logo
+                Image.asset("lib/images/logo_pequeno.png"),
+                const Text('Poliedro Colégio',
+                    style: TextStyle(color: Colors.grey)),
+              ]),
             ],
           ),
         ),
@@ -100,4 +101,3 @@ class LoginScreen extends StatelessWidget {
     );
   }
 }
-

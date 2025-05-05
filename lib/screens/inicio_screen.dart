@@ -25,10 +25,12 @@ class InicioScreen extends StatelessWidget {
                   // Placeholder for Poliedro Food Logo
                   const Column(
                     children: [
-                      Icon(Icons.restaurant_menu, size: 50, color: Colors.orange), // Placeholder logo
+                      Icon(Icons.restaurant_menu,
+                          size: 50, color: Colors.orange), // Placeholder logo
                       Text(
                         'Poliedro Food',
-                        style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                            fontSize: 24, fontWeight: FontWeight.bold),
                       ),
                     ],
                   ),
@@ -67,19 +69,25 @@ class InicioScreen extends StatelessWidget {
                       children: [
                         Row(
                           children: [
-                            Icon(Icons.wb_sunny, color: Colors.orange, size: 30),
+                            Icon(Icons.wb_sunny,
+                                color: Colors.orange, size: 30),
                             SizedBox(width: 10),
                             Text(
                               '16°',
-                              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                              style: TextStyle(
+                                  fontSize: 24, fontWeight: FontWeight.bold),
                             ),
                           ],
                         ),
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
-                            Text('Sábado, 12 Agosto', style: TextStyle(fontSize: 12, color: Colors.grey)),
-                            Text('São Caetano do Sul', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                            Text('Sábado, 12 Agosto',
+                                style: TextStyle(
+                                    fontSize: 12, color: Colors.grey)),
+                            Text('São Caetano do Sul',
+                                style: TextStyle(
+                                    fontSize: 12, color: Colors.grey)),
                           ],
                         ),
                       ],
@@ -88,13 +96,12 @@ class InicioScreen extends StatelessWidget {
                 ],
               ),
               // Bottom Logo
-              const Column(
-                children: [
-                  // Placeholder for Poliedro Colégio Logo
-                  Icon(Icons.apps, size: 40, color: Colors.blue), // Placeholder logo
-                  Text('Poliedro Colégio', style: TextStyle(color: Colors.grey)),
-                ]
-              ),
+              Column(children: [
+                // Placeholder for Poliedro Colégio Logo
+                Image.asset("lib/images/logo_pequeno.png"),
+                const Text('Poliedro Colégio',
+                    style: TextStyle(color: Colors.grey)),
+              ]),
             ],
           ),
         ),
@@ -102,4 +109,3 @@ class InicioScreen extends StatelessWidget {
     );
   }
 }
-

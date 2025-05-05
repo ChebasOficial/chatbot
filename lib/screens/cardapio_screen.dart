@@ -21,12 +21,15 @@ class _CardapioScreenState extends State<CardapioScreen> {
           icon: const Icon(Icons.arrow_back, color: Colors.black54),
           onPressed: () => Navigator.of(context).pop(), // Go back to Login
         ),
-        title: const Text('Cardápio', style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold)),
+        title: const Text('Cardápio',
+            style:
+                TextStyle(color: Colors.black87, fontWeight: FontWeight.bold)),
         centerTitle: true,
         actions: [
           IconButton(
-            icon: const Icon(Icons.shopping_cart_outlined, color: Colors.black54),
-            onPressed: () { /* Navigate to cart or show summary */ },
+            icon:
+                const Icon(Icons.shopping_cart_outlined, color: Colors.black54),
+            onPressed: () {/* Navigate to cart or show summary */},
           ),
         ],
       ),
@@ -45,7 +48,8 @@ class _CardapioScreenState extends State<CardapioScreen> {
                         'https://via.placeholder.com/80',
                         height: 80,
                         errorBuilder: (context, error, stackTrace) =>
-                            const Icon(Icons.fastfood, size: 80, color: Colors.orange),
+                            const Icon(Icons.fastfood,
+                                size: 80, color: Colors.orange),
                       ),
                     ),
                     const SizedBox(height: 30),
@@ -80,12 +84,11 @@ class _CardapioScreenState extends State<CardapioScreen> {
                       ),
                     ),
                     const SizedBox(height: 20),
-                    const Column(
-                      children: [
-                        Icon(Icons.apps, size: 40, color: Colors.blue),
-                        Text('Poliedro Colégio', style: TextStyle(color: Colors.grey)),
-                      ],
-                    ),
+                    Column(children: [
+                      Image.asset("lib/images/logo_pequeno.png"),
+                      const Text('Poliedro Colégio',
+                          style: TextStyle(color: Colors.grey)),
+                    ]),
                   ],
                 ),
               ),
@@ -115,7 +118,10 @@ class _CardapioScreenState extends State<CardapioScreen> {
             ),
             child: Text(
               price,
-              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
+              style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12),
             ),
           ),
         ],
@@ -123,4 +129,3 @@ class _CardapioScreenState extends State<CardapioScreen> {
     );
   }
 }
-
