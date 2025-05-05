@@ -14,16 +14,16 @@ class InicioScreen extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               // Top Section (Time and Logo)
-              Column(
+              const Column(
                 children: [
-                  const SizedBox(height: 20),
-                  const Text(
+                  SizedBox(height: 20),
+                  Text(
                     '04:28:21 PM', // Placeholder time
                     style: TextStyle(color: Colors.grey, fontSize: 12),
                   ),
-                  const SizedBox(height: 20),
+                  SizedBox(height: 20),
                   // Placeholder for Poliedro Food Logo
-                  const Column(
+                  Column(
                     children: [
                       Icon(Icons.restaurant_menu,
                           size: 50, color: Colors.orange), // Placeholder logo

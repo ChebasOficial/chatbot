@@ -6,7 +6,8 @@ class YesNoConfirmationScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Using teal accent color from the image
-    final Color primaryColor = Colors.teal; // Or Colors.cyanAccent[700] or similar
+    const Color primaryColor =
+        Colors.teal; // Or Colors.cyanAccent[700] or similar
 
     return Scaffold(
       backgroundColor: primaryColor,
@@ -15,7 +16,8 @@ class YesNoConfirmationScreen extends StatelessWidget {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.of(context).pop(), // Go back to Linha/Coluna Selection
+          onPressed: () =>
+              Navigator.of(context).pop(), // Go back to Linha/Coluna Selection
         ),
       ),
       body: SafeArea(
@@ -30,7 +32,8 @@ class YesNoConfirmationScreen extends StatelessWidget {
                 height: 5,
                 width: 100,
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.5), // INFO: Consider replacing deprecated withOpacity
+                  color: Colors.white.withOpacity(
+                      0.5), // INFO: Consider replacing deprecated withOpacity
                   borderRadius: BorderRadius.circular(10),
                 ),
                 margin: const EdgeInsets.only(bottom: 80, left: 80, right: 80),
@@ -109,4 +112,3 @@ class YesNoConfirmationScreen extends StatelessWidget {
     );
   }
 }
-
