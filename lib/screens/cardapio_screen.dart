@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-// Importa a tela que será usada como conteúdo do popup
-import 'yes_no_confirmation_screen.dart'; // Certifique-se que o caminho está correto
+import 'yes_no_confirmation_screen.dart';
 
 class CardapioScreen extends StatefulWidget {
   const CardapioScreen({super.key});
@@ -19,7 +18,7 @@ class _CardapioScreenState extends State<CardapioScreen> {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.black54),
-          onPressed: () => Navigator.of(context).pop(), // Volta para Login
+          onPressed: () => Navigator.of(context).pop(),
         ),
         title: const Text('Cardápio',
             style:
@@ -45,7 +44,7 @@ class _CardapioScreenState extends State<CardapioScreen> {
                     const SizedBox(height: 20),
                     Center(
                       child: Image.network(
-                        'https://via.placeholder.com/80', // Imagem de exemplo
+                        'https://via.placeholder.com/80',
                         height: 80,
                         errorBuilder: (context, error, stackTrace) =>
                             const Icon(Icons.fastfood,
@@ -96,14 +95,12 @@ class _CardapioScreenState extends State<CardapioScreen> {
                     ),
                     const SizedBox(height: 20),
                     Column(children: [
-                      // Garanta que o caminho da imagem está correto
                       Image.asset(
                         "lib/images/logo_pequeno.png",
-                        height: 40, // Ajuste a altura se necessário
+                        height: 40,
                         errorBuilder: (context, error, stackTrace) =>
                             const Text('Logo',
-                                style:
-                                    TextStyle(color: Colors.grey)), // Fallback
+                                style: TextStyle(color: Colors.grey)),
                       ),
                       const SizedBox(height: 5),
                       const Text('Poliedro Colégio',
