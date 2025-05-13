@@ -66,7 +66,6 @@ class _CardapioScreenState extends State<CardapioScreen> {
                 child: Column(
                   children: [
                     ElevatedButton(
-                      // --- onPressed
                       onPressed: () {
                         showDialog(
                           context: context,
