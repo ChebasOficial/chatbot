@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'yes_no_confirmation_screen.dart';
 
 class CardapioScreen extends StatefulWidget {
   const CardapioScreen({super.key});
@@ -8,8 +9,6 @@ class CardapioScreen extends StatefulWidget {
 }
 
 class _CardapioScreenState extends State<CardapioScreen> {
-  // Removed unused _selectedItems map
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -19,14 +18,17 @@ class _CardapioScreenState extends State<CardapioScreen> {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.black54),
-          onPressed: () => Navigator.of(context).pop(), // Go back to Login
+          onPressed: () => Navigator.of(context).pop(),
         ),
-        title: const Text('Cardápio', style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold)),
+        title: const Text('Cardápio',
+            style:
+                TextStyle(color: Colors.black87, fontWeight: FontWeight.bold)),
         centerTitle: true,
         actions: [
           IconButton(
-            icon: const Icon(Icons.shopping_cart_outlined, color: Colors.black54),
-            onPressed: () { /* Navigate to cart or show summary */ },
+            icon:
+                const Icon(Icons.shopping_cart_outlined, color: Colors.black54),
+            onPressed: () {/* Navega para o carrinho ou mostra resumo */},
           ),
         ],
       ),
@@ -45,7 +47,8 @@ class _CardapioScreenState extends State<CardapioScreen> {
                         'https://via.placeholder.com/80',
                         height: 80,
                         errorBuilder: (context, error, stackTrace) =>
-                            const Icon(Icons.fastfood, size: 80, color: Colors.orange),
+                            const Icon(Icons.fastfood,
+                                size: 80, color: Colors.orange),
                       ),
                     ),
                     const SizedBox(height: 30),
@@ -64,8 +67,18 @@ class _CardapioScreenState extends State<CardapioScreen> {
                   children: [
                     ElevatedButton(
                       onPressed: () {
-                        // Navigate to Coluna Selection screen
-                        Navigator.pushNamed(context, '/coluna_selection');
+                        showDialog(
+                          context: context,
+                          builder: (BuildContext dialogContext) {
+                            return Dialog(
+                              backgroundColor: Colors.transparent,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(1000),
+                              ),
+                              child: const YesNoConfirmationScreen(),
+                            );
+                          },
+                        );
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.grey[300],
@@ -80,12 +93,18 @@ class _CardapioScreenState extends State<CardapioScreen> {
                       ),
                     ),
                     const SizedBox(height: 20),
-                    const Column(
-                      children: [
-                        Icon(Icons.apps, size: 40, color: Colors.blue),
-                        Text('Poliedro Colégio', style: TextStyle(color: Colors.grey)),
-                      ],
-                    ),
+                    Column(children: [
+                      Image.asset(
+                        "lib/images/logo_pequeno.png",
+                        height: 40,
+                        errorBuilder: (context, error, stackTrace) =>
+                            const Text('Logo',
+                                style: TextStyle(color: Colors.grey)),
+                      ),
+                      const SizedBox(height: 5),
+                      const Text('Poliedro Colégio',
+                          style: TextStyle(color: Colors.grey)),
+                    ]),
                   ],
                 ),
               ),
@@ -115,7 +134,10 @@ class _CardapioScreenState extends State<CardapioScreen> {
             ),
             child: Text(
               price,
-              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
+              style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12),
             ),
           ),
         ],
@@ -123,4 +145,3 @@ class _CardapioScreenState extends State<CardapioScreen> {
     );
   }
 }
-

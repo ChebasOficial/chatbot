@@ -6,19 +6,20 @@ class FinalizacaoScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Using teal accent color from the image
-    final Color primaryColor = Colors.teal; // Or Colors.cyanAccent[700] or similar
+    final Color primaryColor =
+        Colors.teal; // Or Colors.cyanAccent[700] or similar
 
     return Scaffold(
       backgroundColor: primaryColor,
-      body: SafeArea(
+      body: const SafeArea(
         child: Center(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 40.0, vertical: 20.0),
+            padding: EdgeInsets.symmetric(horizontal: 40.0, vertical: 20.0),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                const Text(
+                Text(
                   'Obrigado!',
                   textAlign: TextAlign.center,
                   style: TextStyle(
@@ -27,10 +28,10 @@ class FinalizacaoScreen extends StatelessWidget {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                const SizedBox(height: 40),
+                SizedBox(height: 40),
                 // Optional: Add an icon or image here if desired
                 // Icon(Icons.check_circle_outline, color: Colors.white, size: 80),
-                const SizedBox(height: 40),
+                SizedBox(height: 40),
                 // Button to navigate back or close the app (optional)
                 /*
                 ElevatedButton(
@@ -60,4 +61,3 @@ class FinalizacaoScreen extends StatelessWidget {
     );
   }
 }
-

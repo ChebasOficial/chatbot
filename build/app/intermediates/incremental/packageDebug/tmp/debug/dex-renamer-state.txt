@@ -1,4 +1,0 @@
-#Sat May 03 19:46:21 BRT 2025
-base.0=/Users/chebas/Desktop/pi 4 semestre/chatbot/build/app/intermediates/dex/debug/mergeDexDebug/classes.dex
-path.0=classes.dex
-renamed.0=classes.dex

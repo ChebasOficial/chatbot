@@ -6,7 +6,8 @@ class ColunaSelectionScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Using teal accent color from the image
-    final Color primaryColor = Colors.teal; // Or Colors.cyanAccent[700] or similar
+    const Color primaryColor =
+        Colors.teal; // Or Colors.cyanAccent[700] or similar
 
     return Scaffold(
       backgroundColor: primaryColor,
@@ -91,4 +92,3 @@ class ColunaSelectionScreen extends StatelessWidget {
     );
   }
 }
-
