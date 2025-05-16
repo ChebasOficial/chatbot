@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 // Import all screen files
 import 'package:chatbot/screens/inicio_screen.dart';
@@ -51,4 +52,3 @@ class MyApp extends StatelessWidget {
     );
   }
 }
-
