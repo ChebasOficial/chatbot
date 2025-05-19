@@ -46,6 +46,13 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
     });
   }
   
+  @override
+  void dispose() {
+    _textController.dispose();
+    _scrollController.dispose();
+    super.dispose();
+  }
+  
   Future<void> _loadMenuItems() async {
     try {
       final snapshot = await _firestore.collection('menu_items').get();
@@ -358,13 +365,14 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
             ),
           ),
         );
-    }).catchError((error) {
-      setState(() {
-        _isLoading = false;
+      }).catchError((error) {
+        setState(() {
+          _isLoading = false;
+        });
+        
+        print('Erro ao confirmar pedido: $error');
+        _addBotMessage('Ocorreu um erro ao confirmar seu pedido. Por favor, tente novamente.');
       });
-      
-      print('Erro ao confirmar pedido: $error');
-      _addBotMessage('Ocorreu um erro ao confirmar seu pedido. Por favor, tente novamente.');
     });
   }
   
@@ -497,23 +505,28 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
                     controller: _textController,
                     decoration: const InputDecoration(
                       hintText: 'Digite sua mensagem...',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.all(Radius.circular(30.0)),
-                      ),
+                      border: OutlineInputBorder(),
                       contentPadding: EdgeInsets.symmetric(
                         horizontal: 16.0,
                         vertical: 12.0,
                       ),
                     ),
-                    onSubmitted: (text) => _addUserMessage(text),
+                    onSubmitted: (text) {
+                      _addUserMessage(text);
+                    },
                   ),
                 ),
                 
                 // Botão de enviar
-                IconButton(
-                  icon: const Icon(Icons.send),
-                  color: Colors.deepPurple,
-                  onPressed: () => _addUserMessage(_textController.text),
+                Container(
+                  margin: const EdgeInsets.only(left: 8.0),
+                  child: IconButton(
+                    icon: const Icon(Icons.send),
+                    color: Colors.teal,
+                    onPressed: () {
+                      _addUserMessage(_textController.text);
+                    },
+                  ),
                 ),
               ],
             ),
