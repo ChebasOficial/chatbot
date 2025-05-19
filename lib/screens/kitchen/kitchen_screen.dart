@@ -59,9 +59,26 @@ class KitchenScreenState extends State<KitchenScreen> with SingleTickerProviderS
         actions: [
           IconButton(
             icon: const Icon(Icons.exit_to_app),
-            onPressed: () {
-              Provider.of<ChatbotAuthProvider>(context, listen: false).logout();
-              Navigator.pushReplacementNamed(context, '/admin-login');
+            onPressed: () async {
+              try {
+                // Fazer logout
+                await Provider.of<ChatbotAuthProvider>(context, listen: false).logout();
+                
+                // Redirecionar para a página inicial
+                if (context.mounted) {
+                  Navigator.pushReplacementNamed(context, '/');
+                }
+              } catch (e) {
+                // Mostrar erro se ocorrer
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Erro ao fazer logout: $e'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
             },
           ),
         ],

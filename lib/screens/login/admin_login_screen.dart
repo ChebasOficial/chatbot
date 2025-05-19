@@ -48,9 +48,9 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
       final authProvider = Provider.of<ChatbotAuthProvider>(context, listen: false);
       await authProvider.adminLogin(username, password);
       
-      // Navegar para a tela de cozinha se o login for bem-sucedido
+      // Navegar para a tela de administração se o login for bem-sucedido
       if (context.mounted) {
-        Navigator.pushReplacementNamed(context, '/kitchen');
+        Navigator.pushReplacementNamed(context, '/admin');
       }
     } catch (e) {
       // Mostrar erro se ocorrer
@@ -111,7 +111,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                       ),
                       const SizedBox(height: 16),
                       Text(
-                        'Restaurante Escola Palidro',
+                        'Restaurante Escola Poliedro',
                         style:
                             Theme.of(context).textTheme.displayMedium?.copyWith(
                                   color: Colors.white,
@@ -142,7 +142,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            'Acesso restrito para funcionários da cozinha.',
+                            'Acesso restrito para gerenciamento de produtos.',
                             style: Theme.of(context)
                                 .textTheme
                                 .bodyMedium
@@ -197,7 +197,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                           // Link para login de aluno
                           TextButton(
                             onPressed: () {
-                              Navigator.pushReplacementNamed(context, '/');
+                              Navigator.pushReplacementNamed(context, '/login');
                             },
                             child: Text(
                               'Voltar para login de aluno',

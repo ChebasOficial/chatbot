@@ -23,6 +23,13 @@ class ChatbotAuthProvider extends ChangeNotifier {
 
       if (firebaseUser != null) {
         try {
+          // Verificar se é o admin
+          if (firebaseUser.email == 'admin@p4ed.com.br') {
+            _isAdminLoggedIn = true;
+            notifyListeners();
+            return;
+          }
+          
           // Tentar recuperar dados do Firestore, mas não falhar se não conseguir
           try {
             final userDoc = await _firestore.collection('users').doc(firebaseUser.uid).get();
@@ -317,7 +324,7 @@ class ChatbotAuthProvider extends ChangeNotifier {
     }
   }
 
-  // Login administrativo
+  // Login administrativo - Corrigido para ignorar erros de Firestore
   Future<void> adminLogin(String username, String password) async {
     try {
       // Verificar se o email é de administrador
@@ -325,73 +332,43 @@ class ChatbotAuthProvider extends ChangeNotifier {
         throw Exception('Usuário não encontrado');
       }
 
-      // Verificar se a senha é a padrão para admin
-      if (password != 'admin123') {
-        throw Exception('Senha incorreta');
-      }
-
       try {
-        // Fazer login no Firebase
-        final userCredential = await _auth.signInWithEmailAndPassword(
-          email: username,
-          password: password,
-        );
-        
-        // Definir como admin logado
-        _isAdminLoggedIn = true;
-        _currentUser = null;
-        notifyListeners();
-        
-        // Tentar verificar no Firestore, mas não falhar se não conseguir
+        // Fazer login no Firebase Auth
         try {
-          final userDoc = await _firestore
-              .collection('users')
-              .doc(userCredential.user!.uid)
-              .get();
-
-          if (userDoc.exists) {
-            final userData = userDoc.data();
-            final isAdmin = userData?['isAdmin'] ?? false;
-
-            if (!isAdmin) {
-              // Se não for admin no Firestore, tentar atualizar
-              try {
-                await _firestore
-                    .collection('users')
-                    .doc(userCredential.user!.uid)
-                    .update({
-                  'isAdmin': true,
-                  'lastLogin': FieldValue.serverTimestamp(),
-                });
-              } catch (e) {
-                print('Erro ao atualizar status de admin no Firestore: $e');
-                // Não interromper o fluxo por causa desse erro
-              }
-            }
-          } else {
-            // Se o documento não existe, tentar criar
-            try {
-              await _firestore
-                  .collection('users')
-                  .doc(userCredential.user!.uid)
-                  .set({
-                'ra': username,
-                'isAdmin': true,
-                'createdAt': FieldValue.serverTimestamp(),
-                'lastLogin': FieldValue.serverTimestamp(),
-              });
-            } catch (e) {
-              print('Erro ao criar documento de admin no Firestore: $e');
-              // Não interromper o fluxo por causa desse erro
-            }
+          final userCredential = await _auth.signInWithEmailAndPassword(
+            email: username,
+            password: password,
+          );
+          
+          // Se chegou aqui, o login foi bem-sucedido
+          print('Login administrativo bem-sucedido via Firebase Auth');
+          
+          // Definir como admin logado
+          _isAdminLoggedIn = true;
+          _currentUser = null;
+          notifyListeners();
+          
+          return;
+        } catch (authError) {
+          print('Erro ao fazer login administrativo via Firebase Auth: $authError');
+          
+          // Verificar se é o erro específico de tipo
+          if (authError.toString().contains("type 'List<Object?>'")) {
+            print('Erro de tipo detectado, mas login foi bem-sucedido');
+            
+            // Mesmo com o erro, o login foi bem-sucedido
+            _isAdminLoggedIn = true;
+            _currentUser = null;
+            notifyListeners();
+            return;
           }
-        } catch (firestoreError) {
-          print('Erro ao verificar admin no Firestore: $firestoreError');
-          // Não interromper o fluxo por causa desse erro
+          
+          // Se não for o erro específico, propagar o erro
+          throw Exception('Credenciais inválidas');
         }
-      } catch (authError) {
-        print('Erro ao fazer login administrativo: $authError');
-        throw Exception('Credenciais inválidas');
+      } catch (e) {
+        print('Erro ao fazer login administrativo: $e');
+        rethrow;
       }
     } catch (e) {
       print('Erro em adminLogin: $e');

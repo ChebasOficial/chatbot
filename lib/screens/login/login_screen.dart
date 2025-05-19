@@ -128,7 +128,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       const SizedBox(height: 16),
                       Text(
-                        'Restaurante Escola Palidro',
+                        'Restaurante Escola Poliedro',
                         style:
                             Theme.of(context).textTheme.displayMedium?.copyWith(
                                   color: Colors.white,
