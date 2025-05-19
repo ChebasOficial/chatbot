@@ -12,6 +12,7 @@
         "firebase_auth",
         "firebase_core",
         "flutter",
+        "intl",
         "mask_text_input_formatter",
         "provider",
         "shared_preferences"
@@ -54,6 +55,15 @@
         "test_api",
         "vector_math",
         "vm_service"
+      ]
+    },
+    {
+      "name": "intl",
+      "version": "0.18.1",
+      "dependencies": [
+        "clock",
+        "meta",
+        "path"
       ]
     },
     {

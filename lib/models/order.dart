@@ -1,4 +1,5 @@
 import 'package:chatbot/models/menu_item.dart';
+import 'package:chatbot/models/order_status.dart';
 
 class OrderItem {
   final MenuItem menuItem;
@@ -9,6 +10,9 @@ class OrderItem {
     required this.quantity,
   });
 
+  // Getters para facilitar acesso aos dados do menuItem
+  String get name => menuItem.name;
+  double get price => menuItem.price;
   double get total => menuItem.price * quantity;
 
   factory OrderItem.fromJson(Map<String, dynamic> json) {
@@ -32,7 +36,8 @@ class Order {
   final DateTime timestamp;
   final List<OrderItem> items;
   double total;
-  String status; // 'pending', 'preparing', 'completed'
+  String status; // 'pending', 'inProgress', 'completed', 'archived'
+  String notes; // Observações do pedido
 
   Order({
     required this.id,
@@ -41,7 +46,16 @@ class Order {
     required this.items,
     required this.total,
     required this.status,
+    this.notes = '',
   });
+
+  // Converter String status para OrderStatus enum
+  OrderStatus get orderStatus => OrderStatusExtension.fromString(status);
+  
+  // Atualizar status a partir da enum
+  set orderStatus(OrderStatus newStatus) {
+    status = newStatus.value;
+  }
 
   factory Order.fromJson(Map<String, dynamic> json) {
     return Order(
@@ -53,6 +67,7 @@ class Order {
           .toList(),
       total: json['total'].toDouble(),
       status: json['status'],
+      notes: json['notes'] ?? '',
     );
   }
 
@@ -64,6 +79,7 @@ class Order {
       'items': items.map((item) => item.toJson()).toList(),
       'total': total,
       'status': status,
+      'notes': notes,
     };
   }
 }

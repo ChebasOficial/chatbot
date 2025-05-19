@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:chatbot/models/order.dart';
+import 'package:chatbot/models/order_status.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 
@@ -8,20 +9,30 @@ class OrderProvider extends ChangeNotifier {
 
   List<Order> get orders => _orders;
 
+  // Getters para filtrar pedidos por status
   List<Order> get pendingOrders =>
-      _orders.where((order) => order.status == 'pending').toList();
-  List<Order> get preparingOrders =>
-      _orders.where((order) => order.status == 'preparing').toList();
+      _orders.where((order) => order.status == OrderStatus.pending.value).toList();
+  
+  List<Order> get inProgressOrders =>
+      _orders.where((order) => order.status == OrderStatus.inProgress.value).toList();
+  
   List<Order> get completedOrders =>
-      _orders.where((order) => order.status == 'completed').toList();
+      _orders.where((order) => order.status == OrderStatus.completed.value).toList();
+  
+  List<Order> get archivedOrders =>
+      _orders.where((order) => order.status == OrderStatus.archived.value).toList();
 
+  // Getters para calcular totais
   double get pendingTotal =>
       pendingOrders.fold(0, (sum, order) => sum + order.total);
-  double get preparingTotal =>
-      preparingOrders.fold(0, (sum, order) => sum + order.total);
+  
+  double get inProgressTotal =>
+      inProgressOrders.fold(0, (sum, order) => sum + order.total);
+  
   double get completedTotal =>
       completedOrders.fold(0, (sum, order) => sum + order.total);
-  double get dayTotal => pendingTotal + preparingTotal + completedTotal;
+  
+  double get dayTotal => pendingTotal + inProgressTotal + completedTotal;
 
   // Inicializar o provider carregando os pedidos do armazenamento local
   Future<void> initialize() async {
@@ -35,14 +46,29 @@ class OrderProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Atualizar o status de um pedido
-  Future<void> updateOrderStatus(String orderId, String newStatus) async {
+  // Atualizar o status de um pedido usando OrderStatus enum
+  Future<void> updateOrderStatus(String orderId, OrderStatus newStatus) async {
     final orderIndex = _orders.indexWhere((order) => order.id == orderId);
     if (orderIndex != -1) {
-      _orders[orderIndex].status = newStatus;
+      _orders[orderIndex].orderStatus = newStatus;
       await _saveOrders();
       notifyListeners();
     }
+  }
+
+  // Cancelar um pedido (remove da lista)
+  Future<void> cancelOrder(String orderId) async {
+    final orderIndex = _orders.indexWhere((order) => order.id == orderId);
+    if (orderIndex != -1) {
+      _orders.removeAt(orderIndex);
+      await _saveOrders();
+      notifyListeners();
+    }
+  }
+
+  // Arquivar um pedido (muda status para archived)
+  Future<void> archiveOrder(String orderId) async {
+    await updateOrderStatus(orderId, OrderStatus.archived);
   }
 
   // Carregar pedidos do armazenamento local

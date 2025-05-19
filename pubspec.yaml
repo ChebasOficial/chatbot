@@ -2,10 +2,8 @@ name: chatbot
 description: Aplicativo de chatbot com autenticação Firebase
 publish_to: 'none'
 version: 1.0.0+1
-
 environment:
   sdk: '>=3.0.0 <4.0.0'
-
 dependencies:
   flutter:
     sdk: flutter
@@ -16,12 +14,11 @@ dependencies:
   firebase_core: ^2.15.0
   firebase_auth: ^4.7.2
   cloud_firestore: ^4.8.4
-
+  intl: ^0.18.1
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^2.0.0
-
 flutter:
   uses-material-design: true
   assets:
