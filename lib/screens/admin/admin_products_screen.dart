@@ -303,7 +303,7 @@ class _AdminProductsScreenState extends State<AdminProductsScreen> {
                                     Row(
                                       children: [
                                         Text(
-                                          'R\$ ${item.price.toStringAsFixed(2)}',
+                                          r'R$ ${item.price.toStringAsFixed(2)}',
                                           style: const TextStyle(
                                             fontWeight: FontWeight.bold,
                                             color: Colors.teal,
@@ -453,7 +453,18 @@ class _AddEditMenuItemDialogState extends State<AddEditMenuItemDialog> {
       return downloadUrl;
     } catch (e) {
       print('Erro ao fazer upload da imagem: $e');
-      rethrow;
+      
+      // Se falhar o upload, retornar URL atual ou vazio
+      if (_imageUrl.isNotEmpty) {
+        return _imageUrl;
+      }
+      
+      // Mostrar erro específico para o usuário
+      if (e.toString().contains('permission-denied')) {
+        throw Exception('Permissão negada para upload de imagem. Verifique as regras de segurança do Firebase Storage.');
+      }
+      
+      throw Exception('Erro ao fazer upload da imagem. Tente novamente mais tarde.');
     }
   }
   
@@ -476,69 +487,87 @@ class _AddEditMenuItemDialogState extends State<AddEditMenuItemDialog> {
       
       // Fazer upload da imagem se houver
       String imageUrl = _imageUrl;
-      if (_imageFile != null) {
-        imageUrl = await _uploadImage();
+      try {
+        if (_imageFile != null) {
+          imageUrl = await _uploadImage();
+        }
+      } catch (uploadError) {
+        print('Erro no upload da imagem, continuando sem imagem: $uploadError');
+        // Continuar sem imagem se o upload falhar
       }
       
       // Criar ou atualizar item no Firestore
       late MenuItem savedItem;
       
-      if (widget.item == null) {
-        // Criar novo item
-        final docRef = await _firestore.collection('menu_items').add({
-          'name': name,
-          'description': description,
-          'price': price,
-          'quantity': quantity,
-          'imageUrl': imageUrl,
-          'createdAt': FieldValue.serverTimestamp(),
-        });
+      try {
+        if (widget.item == null) {
+          // Criar novo item
+          final docRef = await _firestore.collection('menu_items').add({
+            'name': name,
+            'description': description,
+            'price': price,
+            'quantity': quantity,
+            'imageUrl': imageUrl,
+            'createdAt': FieldValue.serverTimestamp(),
+          });
+          
+          savedItem = MenuItem(
+            id: docRef.id,
+            name: name,
+            description: description,
+            price: price,
+            quantity: quantity,
+            imageUrl: imageUrl,
+          );
+        } else {
+          // Atualizar item existente
+          await _firestore.collection('menu_items').doc(widget.item!.id).update({
+            'name': name,
+            'description': description,
+            'price': price,
+            'quantity': quantity,
+            'imageUrl': imageUrl,
+            'updatedAt': FieldValue.serverTimestamp(),
+          });
+          
+          savedItem = MenuItem(
+            id: widget.item!.id,
+            name: name,
+            description: description,
+            price: price,
+            quantity: quantity,
+            imageUrl: imageUrl,
+          );
+        }
         
-        savedItem = MenuItem(
-          id: docRef.id,
-          name: name,
-          description: description,
-          price: price,
-          quantity: quantity,
-          imageUrl: imageUrl,
-        );
-      } else {
-        // Atualizar item existente
-        await _firestore.collection('menu_items').doc(widget.item!.id).update({
-          'name': name,
-          'description': description,
-          'price': price,
-          'quantity': quantity,
-          'imageUrl': imageUrl,
-          'updatedAt': FieldValue.serverTimestamp(),
-        });
+        // Chamar callback de salvamento
+        widget.onSave(savedItem);
         
-        savedItem = MenuItem(
-          id: widget.item!.id,
-          name: name,
-          description: description,
-          price: price,
-          quantity: quantity,
-          imageUrl: imageUrl,
-        );
-      }
-      
-      // Chamar callback de salvamento
-      widget.onSave(savedItem);
-      
-      // Fechar diálogo
-      if (mounted) {
-        Navigator.pop(context);
+        // Fechar diálogo
+        if (mounted) {
+          Navigator.pop(context);
+          
+          // Mostrar mensagem de sucesso
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(widget.item == null
+                  ? 'Item adicionado com sucesso!'
+                  : 'Item atualizado com sucesso!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } catch (firestoreError) {
+        print('Erro ao salvar no Firestore: $firestoreError');
         
-        // Mostrar mensagem de sucesso
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(widget.item == null
-                ? 'Item adicionado com sucesso!'
-                : 'Item atualizado com sucesso!'),
-            backgroundColor: Colors.green,
-          ),
-        );
+        // Tratar erro de permissão especificamente
+        if (firestoreError.toString().contains('permission-denied')) {
+          throw Exception(
+            'Permissão negada para salvar item no cardápio. Verifique se você está logado como administrador e se as regras de segurança do Firestore permitem escrita na coleção "menu_items".'
+          );
+        }
+        
+        throw Exception('Erro ao salvar item no cardápio. Tente novamente mais tarde.');
       }
     } catch (e) {
       print('Erro ao salvar item: $e');
@@ -601,7 +630,6 @@ class _AddEditMenuItemDialogState extends State<AddEditMenuItemDialog> {
                                     child: Icon(
                                       Icons.error,
                                       color: Colors.red,
-                                      size: 40,
                                     ),
                                   );
                                 },
@@ -620,8 +648,8 @@ class _AddEditMenuItemDialogState extends State<AddEditMenuItemDialog> {
               Text(
                 'Toque para selecionar uma imagem',
                 style: TextStyle(
-                  color: Colors.grey[600],
                   fontSize: 12,
+                  color: Colors.grey[600],
                 ),
               ),
               const SizedBox(height: 16),
@@ -629,7 +657,7 @@ class _AddEditMenuItemDialogState extends State<AddEditMenuItemDialog> {
               TextFormField(
                 controller: _nameController,
                 decoration: const InputDecoration(
-                  labelText: 'Nome',
+                  labelText: 'Nome do item',
                   border: OutlineInputBorder(),
                 ),
                 validator: (value) {
@@ -709,7 +737,7 @@ class _AddEditMenuItemDialogState extends State<AddEditMenuItemDialog> {
       ),
       actions: [
         TextButton(
-          onPressed: _isLoading ? null : () => Navigator.pop(context),
+          onPressed: () => Navigator.pop(context),
           child: const Text('Cancelar'),
         ),
         ElevatedButton(
