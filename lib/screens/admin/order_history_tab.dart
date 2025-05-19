@@ -37,6 +37,7 @@ class _OrderHistoryTabState extends State<OrderHistoryTab> {
         final data = doc.data();
         return {
           'id': doc.id,
+          'orderNumber': data['orderNumber'] ?? 0,
           'userEmail': data['userEmail'] ?? 'Usuário desconhecido',
           'timestamp': data['timestamp'] as Timestamp?,
           'items': data['items'] as List<dynamic>? ?? [],
@@ -105,7 +106,7 @@ class _OrderHistoryTabState extends State<OrderHistoryTab> {
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
-                                    'Pedido #${order['id']}',
+                                    'Pedido #${(order['orderNumber'] as int).toString().padLeft(3, '0')}',
                                     style: const TextStyle(
                                       fontSize: 16.0,
                                       fontWeight: FontWeight.bold,
