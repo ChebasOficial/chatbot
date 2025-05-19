@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 // Import all screen files
 import 'package:chatbot/screens/inicio_screen.dart';
 import 'package:chatbot/screens/login_screen.dart';
+import 'package:chatbot/screens/admin_login_screen.dart';
 import 'package:chatbot/screens/cardapio_screen.dart';
 import 'package:chatbot/screens/coluna_selection_screen.dart';
 import 'package:chatbot/screens/confirmation_ok_screen.dart';
@@ -14,12 +17,27 @@ import 'package:chatbot/screens/yes_no_confirmation_screen.dart';
 import 'package:chatbot/screens/contact_message_screen.dart';
 import 'package:chatbot/screens/finalizacao_screen.dart';
 
+// Import providers
+import 'package:chatbot/providers/auth_provider.dart';
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-  runApp(const MyApp());
+  
+  // Inicializar o ChatbotAuthProvider
+  final chatbotAuthProvider = ChatbotAuthProvider();
+  await chatbotAuthProvider.initialize();
+  
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => chatbotAuthProvider),
+      ],
+      child: const MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
@@ -41,6 +59,7 @@ class MyApp extends StatelessWidget {
       routes: {
         '/': (context) => const InicioScreen(),
         '/login': (context) => const LoginScreen(),
+        '/admin-login': (context) => const AdminLoginScreen(),
         '/cardapio': (context) => const CardapioScreen(),
         '/coluna_selection': (context) => const ColunaSelectionScreen(),
         '/confirmation_ok': (context) => const ConfirmationOkScreen(),
