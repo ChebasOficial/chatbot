@@ -54,29 +54,84 @@ class _LoginScreenState extends State<LoginScreen> {
     
     setState(() {
       _isLoading = true;
+      _errorMessage = null;
     });
     
     try {
-      // Buscar usuário pelo email no Firestore
-      final querySnapshot = await FirebaseFirestore.instance
-          .collection('users')
-          .where('ra', isEqualTo: _raController.text.trim())
-          .limit(1)
-          .get();
+      // Validar formato do RA antes de verificar
+      final raRegex = RegExp(r'^\d{8}@p4ed\.com\.br$');
+      if (!raRegex.hasMatch(_raController.text.trim())) {
+        setState(() {
+          _errorMessage = 'R.A. inválido. Use o formato: 12345678@p4ed.com.br';
+          _isLoading = false;
+        });
+        return;
+      }
       
-      setState(() {
-        _isFirstLogin = querySnapshot.docs.isEmpty;
-        _isLoading = false;
-      });
+      try {
+        // Buscar usuário pelo email no Firestore
+        final querySnapshot = await FirebaseFirestore.instance
+            .collection('users')
+            .where('ra', isEqualTo: _raController.text.trim())
+            .limit(1)
+            .get();
+        
+        setState(() {
+          _isFirstLogin = querySnapshot.docs.isEmpty;
+          _isLoading = false;
+        });
+        
+        // Se for primeiro login, mostrar mensagem informativa
+        if (_isFirstLogin && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Primeiro acesso detectado. Por favor, informe seu telefone.'),
+              backgroundColor: Colors.blue,
+            ),
+          );
+        }
+      } catch (firestoreError) {
+        // Tratar erros específicos do Firestore de forma amigável
+        print('Erro do Firestore: $firestoreError');
+        
+        // Assumir que é primeiro login para permitir que o usuário continue
+        setState(() {
+          _isFirstLogin = true;
+          _isLoading = false;
+          
+          // Mensagem amigável em vez de detalhes técnicos
+          if (firestoreError.toString().contains('permission-denied')) {
+            // Não mostrar mensagem de erro, apenas habilitar o campo de telefone
+            _errorMessage = null;
+            
+            // Mostrar mensagem informativa
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Por favor, informe seu telefone para continuar.'),
+                    backgroundColor: Colors.blue,
+                  ),
+                );
+              }
+            });
+          } else {
+            _errorMessage = 'Não foi possível verificar o cadastro. Verifique sua conexão.';
+          }
+        });
+      }
     } catch (e) {
+      print('Erro geral ao verificar primeiro login: $e');
       setState(() {
-        _isFirstLogin = true;
+        _isFirstLogin = true; // Em caso de erro, assumir primeiro login para pedir telefone
         _isLoading = false;
+        _errorMessage = 'Não foi possível verificar o cadastro. Tente novamente mais tarde.';
       });
     }
   }
 
   Future<void> _login() async {
+    // Validar formulário
     if (_formKey.currentState?.validate() ?? false) {
       setState(() {
         _isLoading = true;
@@ -84,34 +139,72 @@ class _LoginScreenState extends State<LoginScreen> {
       });
 
       try {
+        // Se for primeiro login, verificar se o telefone foi informado
+        if (_isFirstLogin && _phoneController.text.isEmpty) {
+          setState(() {
+            _errorMessage = 'Telefone é obrigatório no primeiro login';
+            _isLoading = false;
+          });
+          return;
+        }
+        
         final authProvider = Provider.of<ChatbotAuthProvider>(context, listen: false);
-        await authProvider.login(
-          User(
-            ra: _raController.text.trim(),
-            phone: _phoneController.text.trim(),
+        
+        // Criar objeto de usuário com os dados informados
+        final user = User(
+          ra: _raController.text.trim(),
+          phone: _phoneController.text.trim(),
+        );
+        
+        // Tentar fazer login
+        await authProvider.login(user);
+
+        // Se chegou aqui, login foi bem-sucedido
+        if (!mounted) return;
+        
+        // Mostrar mensagem de sucesso
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Login realizado com sucesso!'),
+            backgroundColor: Colors.green,
           ),
         );
-
-        if (!mounted) return;
+        
+        // Navegar para a próxima tela
         Navigator.pushReplacementNamed(context, '/cardapio');
       } catch (e) {
+        print('Erro durante login na tela: $e');
         if (!mounted) return;
+        
+        // Tratar mensagens de erro de forma amigável
+        String errorMessage = 'Erro ao fazer login. Tente novamente mais tarde.';
+        
+        // Personalizar mensagens para erros específicos
+        if (e.toString().contains('R.A. inválido')) {
+          errorMessage = 'R.A. inválido. Use o formato: 12345678@p4ed.com.br';
+        } else if (e.toString().contains('Telefone inválido')) {
+          errorMessage = 'Telefone inválido. Use o formato: (11) 98765-4321';
+        } else if (e.toString().contains('Telefone é obrigatório')) {
+          errorMessage = 'Telefone é obrigatório no primeiro login';
+        } else if (e.toString().contains('permission-denied')) {
+          errorMessage = 'Não foi possível acessar o banco de dados. Verifique sua conexão.';
+        } else if (e.toString().contains('network')) {
+          errorMessage = 'Erro de conexão. Verifique sua internet e tente novamente.';
+        }
+        
+        // Atualizar estado com mensagem de erro amigável
         setState(() {
-          _errorMessage = e.toString();
+          _errorMessage = errorMessage;
+          _isLoading = false;
         });
         
+        // Mostrar snackbar com erro
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Erro ao fazer login: ${e.toString()}'),
+            content: Text(errorMessage),
             backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
-      } finally {
-        if (mounted) {
-          setState(() {
-            _isLoading = false;
-          });
-        }
       }
     }
   }

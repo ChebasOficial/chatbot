@@ -94,6 +94,7 @@ class ChatbotAuthProvider extends ChangeNotifier {
         await _createUserAccount(user.ra, user.phone);
       }
     } catch (e) {
+      print('Erro durante login: $e');
       rethrow;
     }
   }
@@ -118,25 +119,35 @@ class ChatbotAuthProvider extends ChangeNotifier {
       // Gerar senha a partir do telefone (apenas números)
       final password = phone.replaceAll(RegExp(r'[^0-9]'), '');
       
-      // Fazer login no Firebase Auth
-      final userCredential = await _auth.signInWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
-      
-      // Atualizar timestamp de último login
-      await _firestore.collection('users').doc(userCredential.user!.uid).update({
-        'lastLogin': FieldValue.serverTimestamp(),
-      });
-      
-      _currentUser = app_models.User(
-        ra: email,
-        phone: phone,
-      );
-      _isAdminLoggedIn = false;
-      notifyListeners();
-    } on firebase_auth.FirebaseAuthException catch (e) {
-      _handleFirebaseAuthError(e);
+      try {
+        // Fazer login no Firebase Auth com tratamento de erro específico
+        await _auth.signInWithEmailAndPassword(
+          email: email,
+          password: password,
+        ).then((userCredential) async {
+          // Atualizar timestamp de último login
+          await _firestore.collection('users').doc(userCredential.user!.uid).update({
+            'lastLogin': FieldValue.serverTimestamp(),
+          });
+          
+          _currentUser = app_models.User(
+            ra: email,
+            phone: phone,
+          );
+          _isAdminLoggedIn = false;
+          notifyListeners();
+        });
+      } catch (authError) {
+        print('Erro específico de autenticação: $authError');
+        if (authError is firebase_auth.FirebaseAuthException) {
+          _handleFirebaseAuthError(authError);
+        } else {
+          throw Exception('Erro ao fazer login: $authError');
+        }
+      }
+    } catch (e) {
+      print('Erro em _loginExistingUser: $e');
+      rethrow;
     }
   }
   
@@ -146,29 +157,39 @@ class ChatbotAuthProvider extends ChangeNotifier {
       // Gerar senha a partir do telefone (apenas números)
       final password = phone.replaceAll(RegExp(r'[^0-9]'), '');
       
-      // Criar usuário no Firebase Auth
-      final userCredential = await _auth.createUserWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
-      
-      // Salvar dados adicionais no Firestore
-      await _firestore.collection('users').doc(userCredential.user!.uid).set({
-        'ra': email,
-        'phone': phone,
-        'isAdmin': false,
-        'createdAt': FieldValue.serverTimestamp(),
-        'lastLogin': FieldValue.serverTimestamp(),
-      });
-      
-      _currentUser = app_models.User(
-        ra: email,
-        phone: phone,
-      );
-      _isAdminLoggedIn = false;
-      notifyListeners();
-    } on firebase_auth.FirebaseAuthException catch (e) {
-      _handleFirebaseAuthError(e);
+      try {
+        // Criar usuário no Firebase Auth com tratamento de erro específico
+        await _auth.createUserWithEmailAndPassword(
+          email: email,
+          password: password,
+        ).then((userCredential) async {
+          // Salvar dados adicionais no Firestore
+          await _firestore.collection('users').doc(userCredential.user!.uid).set({
+            'ra': email,
+            'phone': phone,
+            'isAdmin': false,
+            'createdAt': FieldValue.serverTimestamp(),
+            'lastLogin': FieldValue.serverTimestamp(),
+          });
+          
+          _currentUser = app_models.User(
+            ra: email,
+            phone: phone,
+          );
+          _isAdminLoggedIn = false;
+          notifyListeners();
+        });
+      } catch (authError) {
+        print('Erro específico de criação de conta: $authError');
+        if (authError is firebase_auth.FirebaseAuthException) {
+          _handleFirebaseAuthError(authError);
+        } else {
+          throw Exception('Erro ao criar conta: $authError');
+        }
+      }
+    } catch (e) {
+      print('Erro em _createUserAccount: $e');
+      rethrow;
     }
   }
   
@@ -180,37 +201,45 @@ class ChatbotAuthProvider extends ChangeNotifier {
         throw Exception('Usuário não encontrado');
       }
       
-      // Tentar fazer login no Firebase
-      final userCredential = await _auth.signInWithEmailAndPassword(
-        email: username,
-        password: password,
-      );
-      
-      // Verificar se o usuário é realmente um administrador
-      final userDoc = await _firestore.collection('users').doc(userCredential.user!.uid).get();
-      
-      if (!userDoc.exists || !(userDoc.data()?['isAdmin'] ?? false)) {
-        // Se não for admin, fazer logout e lançar erro
-        await _auth.signOut();
-        throw Exception('Acesso não autorizado');
-      }
-      
-      // Atualizar timestamp de último login
-      await _firestore.collection('users').doc(userCredential.user!.uid).update({
-        'lastLogin': FieldValue.serverTimestamp(),
-      });
-      
-      _isAdminLoggedIn = true;
-      _currentUser = null;
-      notifyListeners();
-    } on firebase_auth.FirebaseAuthException catch (e) {
-      if (e.code == 'user-not-found' && username == 'admin@p4ed.com.br') {
-        // Criar conta de administrador se não existir
-        await _createAdminAccount(username, password);
-      } else {
-        _handleFirebaseAuthError(e);
+      try {
+        // Tentar fazer login no Firebase com tratamento de erro específico
+        await _auth.signInWithEmailAndPassword(
+          email: username,
+          password: password,
+        ).then((userCredential) async {
+          // Verificar se o usuário é realmente um administrador
+          final userDoc = await _firestore.collection('users').doc(userCredential.user!.uid).get();
+          
+          if (!userDoc.exists || !(userDoc.data()?['isAdmin'] ?? false)) {
+            // Se não for admin, fazer logout e lançar erro
+            await _auth.signOut();
+            throw Exception('Acesso não autorizado');
+          }
+          
+          // Atualizar timestamp de último login
+          await _firestore.collection('users').doc(userCredential.user!.uid).update({
+            'lastLogin': FieldValue.serverTimestamp(),
+          });
+          
+          _isAdminLoggedIn = true;
+          _currentUser = null;
+          notifyListeners();
+        });
+      } catch (authError) {
+        print('Erro específico de login admin: $authError');
+        if (authError is firebase_auth.FirebaseAuthException) {
+          if (authError.code == 'user-not-found' && username == 'admin@p4ed.com.br') {
+            // Criar conta de administrador se não existir
+            await _createAdminAccount(username, password);
+          } else {
+            _handleFirebaseAuthError(authError);
+          }
+        } else {
+          throw Exception('Erro ao fazer login administrativo: $authError');
+        }
       }
     } catch (e) {
+      print('Erro em adminLogin: $e');
       rethrow;
     }
   }
@@ -218,25 +247,35 @@ class ChatbotAuthProvider extends ChangeNotifier {
   // Criar conta de administrador
   Future<void> _createAdminAccount(String email, String password) async {
     try {
-      // Criar usuário no Firebase Auth
-      final userCredential = await _auth.createUserWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
-      
-      // Salvar dados adicionais no Firestore
-      await _firestore.collection('users').doc(userCredential.user!.uid).set({
-        'email': email,
-        'isAdmin': true,
-        'createdAt': FieldValue.serverTimestamp(),
-        'lastLogin': FieldValue.serverTimestamp(),
-      });
-      
-      _isAdminLoggedIn = true;
-      _currentUser = null;
-      notifyListeners();
-    } on firebase_auth.FirebaseAuthException catch (e) {
-      _handleFirebaseAuthError(e);
+      try {
+        // Criar usuário no Firebase Auth com tratamento de erro específico
+        await _auth.createUserWithEmailAndPassword(
+          email: email,
+          password: password,
+        ).then((userCredential) async {
+          // Salvar dados adicionais no Firestore
+          await _firestore.collection('users').doc(userCredential.user!.uid).set({
+            'email': email,
+            'isAdmin': true,
+            'createdAt': FieldValue.serverTimestamp(),
+            'lastLogin': FieldValue.serverTimestamp(),
+          });
+          
+          _isAdminLoggedIn = true;
+          _currentUser = null;
+          notifyListeners();
+        });
+      } catch (authError) {
+        print('Erro específico de criação de conta admin: $authError');
+        if (authError is firebase_auth.FirebaseAuthException) {
+          _handleFirebaseAuthError(authError);
+        } else {
+          throw Exception('Erro ao criar conta administrativa: $authError');
+        }
+      }
+    } catch (e) {
+      print('Erro em _createAdminAccount: $e');
+      rethrow;
     }
   }
   
@@ -255,6 +294,7 @@ class ChatbotAuthProvider extends ChangeNotifier {
   
   // Tratar erros do Firebase Auth
   void _handleFirebaseAuthError(firebase_auth.FirebaseAuthException e) {
+    print('Código de erro do Firebase Auth: ${e.code}');
     switch (e.code) {
       case 'invalid-email':
         throw Exception('Email inválido');
