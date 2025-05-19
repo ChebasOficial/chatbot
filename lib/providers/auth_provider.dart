@@ -23,28 +23,43 @@ class ChatbotAuthProvider extends ChangeNotifier {
 
       if (firebaseUser != null) {
         try {
-          // Verificar se é um administrador
-          final userDoc =
-              await _firestore.collection('users').doc(firebaseUser.uid).get();
+          // Tentar recuperar dados do Firestore, mas não falhar se não conseguir
+          try {
+            final userDoc = await _firestore.collection('users').doc(firebaseUser.uid).get();
+            
+            if (userDoc.exists) {
+              final userData = userDoc.data();
+              final isAdmin = userData?['isAdmin'] ?? false;
 
-          if (userDoc.exists) {
-            final userData = userDoc.data();
-            final isAdmin = userData?['isAdmin'] ?? false;
-
-            if (isAdmin) {
-              _isAdminLoggedIn = true;
+              if (isAdmin) {
+                _isAdminLoggedIn = true;
+              } else {
+                // Recuperar dados do usuário comum
+                final phone = userData?['phone'] ?? '';
+                _currentUser = app_models.User(
+                  ra: firebaseUser.email ?? '',
+                  phone: phone,
+                );
+              }
             } else {
-              // Recuperar dados do usuário comum
-              final phone = userData?['phone'] ?? '';
+              // Se o documento não existe, criar um usuário básico com o email
               _currentUser = app_models.User(
                 ra: firebaseUser.email ?? '',
-                phone: phone,
+                phone: '',
               );
             }
-            notifyListeners();
+          } catch (firestoreError) {
+            // Se falhar ao acessar o Firestore, criar um usuário básico com o email
+            print('Erro ao acessar Firestore durante inicialização: $firestoreError');
+            _currentUser = app_models.User(
+              ra: firebaseUser.email ?? '',
+              phone: '',
+            );
           }
+          
+          notifyListeners();
         } catch (e) {
-          print('Erro ao inicializar provider com Firestore: $e');
+          print('Erro ao inicializar provider: $e');
           // Fazer logout para garantir consistência
           await _auth.signOut();
           _currentUser = null;
@@ -93,54 +108,6 @@ class ChatbotAuthProvider extends ChangeNotifier {
     }
   }
 
-  // Verificar se o usuário já existe no Firestore
-  Future<bool> _userExists(String email) async {
-    try {
-      final querySnapshot = await _firestore
-          .collection('users')
-          .where('ra', isEqualTo: email)
-          .limit(1)
-          .get();
-
-      final exists = querySnapshot.docs.isNotEmpty;
-      print(
-          'Usuário ${exists ? "encontrado" : "não encontrado"} no Firestore: $email');
-      return exists;
-    } catch (e) {
-      print('Erro ao verificar existência do usuário: $e');
-      if (e.toString().contains('permission-denied')) {
-        throw Exception(
-            'Erro de permissão ao acessar o banco de dados. Verifique as regras de segurança do Firestore.');
-      } else if (e.toString().contains('network')) {
-        throw Exception(
-            'Sem conexão com a internet. O login requer conexão ativa com a internet.');
-      } else {
-        throw Exception(
-            'Erro ao verificar existência do usuário. Verifique sua conexão com a internet.');
-      }
-    }
-  }
-
-  // Obter telefone do usuário do Firestore
-  Future<String?> _getUserPhone(String email) async {
-    try {
-      final querySnapshot = await _firestore
-          .collection('users')
-          .where('ra', isEqualTo: email)
-          .limit(1)
-          .get();
-
-      if (querySnapshot.docs.isNotEmpty) {
-        final userData = querySnapshot.docs.first.data();
-        return userData['phone'] as String?;
-      }
-      return null;
-    } catch (e) {
-      print('Erro ao obter telefone do usuário: $e');
-      return null;
-    }
-  }
-
   // Login de usuário comum
   Future<void> login(app_models.User user) async {
     try {
@@ -153,157 +120,71 @@ class ChatbotAuthProvider extends ChangeNotifier {
         throw Exception('R.A. inválido. Use o formato: 12345678@p4ed.com.br');
       }
 
-      // Verificar se há dados salvos localmente
-      final prefs = await SharedPreferences.getInstance();
-      final storedEmail = prefs.getString('user_email');
-      final storedPhone = prefs.getString('user_phone');
-
-      // Se encontrou localmente e tem telefone armazenado
-      if (storedEmail == user.ra &&
-          storedPhone != null &&
-          storedPhone.isNotEmpty) {
-        print('Usuário encontrado no armazenamento local: ${user.ra}');
-
-        // Se não forneceu telefone, usar o armazenado apenas para preencher o campo
-        if (user.phone.isEmpty) {
-          print('Usando telefone armazenado localmente: $storedPhone');
-          user = app_models.User(
-            ra: user.ra,
-            phone: storedPhone,
-          );
-        }
+      // Validar o formato do telefone
+      final phoneRegex = RegExp(r'^\(\d{2}\) \d{5}-\d{4}$');
+      if (!phoneRegex.hasMatch(user.phone)) {
+        print('Formato de telefone inválido: ${user.phone}');
+        throw Exception('Telefone inválido. Use o formato: (11) 98765-4321');
       }
 
-      // Verificar se o telefone foi fornecido
-      if (user.phone.isEmpty) {
-        // Se não forneceu telefone, tentar buscar do Firestore
-        try {
-          final phoneFromFirestore = await _getUserPhone(user.ra);
-          if (phoneFromFirestore != null && phoneFromFirestore.isNotEmpty) {
-            print('Telefone recuperado do Firestore: $phoneFromFirestore');
-            user = app_models.User(
-              ra: user.ra,
-              phone: phoneFromFirestore,
-            );
-          } else {
-            // Se não encontrou no Firestore, solicitar telefone
-            print('Telefone não encontrado no Firestore');
-            throw Exception('Telefone é obrigatório para o primeiro login.');
-          }
-        } catch (e) {
-          print('Erro ao buscar telefone do Firestore: $e');
-          throw Exception('Telefone é obrigatório para o primeiro login.');
-        }
-      }
+      // Gerar senha a partir do telefone fornecido
+      final password = user.phone.replaceAll(RegExp(r'[^0-9]'), '');
+      print('Senha gerada a partir do telefone: $password');
 
-      // Verificar se o usuário existe no Firestore
-      bool userExists = false;
       try {
-        userExists = await _userExists(user.ra);
-      } catch (e) {
-        print('Erro ao verificar existência do usuário: $e');
-        // Continuar com o fluxo, assumindo que precisamos criar o usuário
-      }
-
-      if (userExists) {
-        print('Usuário existe, tentando login: ${user.ra}');
-
-        // Telefone já foi verificado ou recuperado acima
-        print('Telefone fornecido: ${user.phone}');
-
-        // Validar o formato do telefone
-        final phoneRegex = RegExp(r'^\(\d{2}\) \d{5}-\d{4}$');
-        if (!phoneRegex.hasMatch(user.phone)) {
-          print('Formato de telefone inválido: ${user.phone}');
-          throw Exception('Telefone inválido. Use o formato: (11) 98765-4321');
-        }
-
-        // Gerar senha a partir do telefone fornecido
-        final password = user.phone.replaceAll(RegExp(r'[^0-9]'), '');
-        print('Senha gerada a partir do telefone fornecido: $password');
-
+        // Tentar login no Firebase
         try {
-          // Tentar login no Firebase
-          await _auth
-              .signInWithEmailAndPassword(
+          final userCredential = await _auth.signInWithEmailAndPassword(
             email: user.ra,
             password: password,
-          )
-              .then((userCredential) async {
-            print('Login bem-sucedido com telefone fornecido');
-
-            // Atualizar telefone no Firestore
-            try {
-              await _firestore
-                  .collection('users')
-                  .doc(userCredential.user!.uid)
-                  .update({
-                'phone': user.phone,
-                'lastLogin': FieldValue.serverTimestamp(),
-              });
-              print('Telefone atualizado no Firestore');
-            } catch (updateError) {
-              print('Erro ao atualizar telefone no Firestore: $updateError');
-            }
-
-            // Salvar dados localmente
-            await _saveUserToLocal(user.ra, user.phone);
-
-            _currentUser = app_models.User(
-              ra: user.ra,
-              phone: user.phone,
-            );
-            _isAdminLoggedIn = false;
-            notifyListeners();
-          });
-
-          // Se chegou aqui, login foi bem-sucedido
+          );
+          
+          print('Login bem-sucedido');
+          
+          // Salvar dados localmente
+          await _saveUserToLocal(user.ra, user.phone);
+          
+          _currentUser = app_models.User(
+            ra: user.ra,
+            phone: user.phone,
+          );
+          _isAdminLoggedIn = false;
+          notifyListeners();
+          
+          // Tentar atualizar telefone no Firestore, mas não falhar se não conseguir
+          try {
+            await _firestore
+                .collection('users')
+                .doc(userCredential.user!.uid)
+                .update({
+              'phone': user.phone,
+              'lastLogin': FieldValue.serverTimestamp(),
+            });
+            print('Telefone atualizado no Firestore');
+          } catch (e) {
+            print('Erro ao atualizar telefone no Firestore: $e');
+            // Não interromper o fluxo por causa desse erro
+          }
+          
           return;
         } catch (authError) {
-          print('Erro ao tentar login com telefone fornecido: $authError');
-          throw Exception(
-              'Senha incorreta. Verifique se o telefone está correto.');
+          // Se o erro for de usuário não encontrado, criar nova conta
+          if (authError is firebase_auth.FirebaseAuthException && 
+              (authError.code == 'user-not-found' || authError.code == 'wrong-password')) {
+            print('Usuário não encontrado ou senha incorreta, tentando criar conta');
+            await _createUserAccount(user.ra, user.phone);
+            return;
+          } else {
+            print('Erro ao fazer login: $authError');
+            throw Exception('Erro ao fazer login. Verifique seus dados e tente novamente.');
+          }
         }
-      } else {
-        // Usuário não existe, criar nova conta
-        print('Primeiro login para: ${user.ra}');
-
-        // Primeiro login, validar telefone também
-        if (user.phone.isEmpty) {
-          print('Telefone não fornecido no primeiro login');
-          throw Exception('Telefone é obrigatório no primeiro login');
-        }
-
-        // Validar o formato do telefone
-        final phoneRegex = RegExp(r'^\(\d{2}\) \d{5}-\d{4}$');
-        if (!phoneRegex.hasMatch(user.phone)) {
-          print('Formato de telefone inválido: ${user.phone}');
-          throw Exception('Telefone inválido. Use o formato: (11) 98765-4321');
-        }
-
-        // Primeiro login, criar conta
-        print('Criando nova conta para: ${user.ra}');
-        await _createUserAccount(user.ra, user.phone);
+      } catch (e) {
+        print('Erro ao fazer login: $e');
+        rethrow;
       }
     } catch (e) {
-      // Se ocorrer erro ao verificar usuário ou ao fazer login, tentar criar conta
-      if (e.toString().contains('Erro ao verificar existência do usuário') &&
-          user.phone.isNotEmpty) {
-        print('Erro ao verificar usuário, tentando criar conta: ${user.ra}');
-
-        // Validar o formato do telefone
-        final phoneRegex = RegExp(r'^\(\d{2}\) \d{5}-\d{4}$');
-        if (!phoneRegex.hasMatch(user.phone)) {
-          print('Formato de telefone inválido: ${user.phone}');
-          throw Exception('Telefone inválido. Use o formato: (11) 98765-4321');
-        }
-
-        // Criar conta
-        await _createUserAccount(user.ra, user.phone);
-        return;
-      }
-
-      // Se não for erro de verificação ou não tiver telefone, propagar o erro
+      print('Erro em login: $e');
       rethrow;
     }
   }
@@ -315,40 +196,29 @@ class ChatbotAuthProvider extends ChangeNotifier {
       final password = phone.replaceAll(RegExp(r'[^0-9]'), '');
 
       try {
-        // Criar usuário no Firebase Auth - usando try/catch em vez de then para melhor tratamento de erros
-        firebase_auth.UserCredential userCredential;
-        try {
-          userCredential = await _auth.createUserWithEmailAndPassword(
-            email: email,
-            password: password,
-          );
-        } catch (authError) {
-          print('Erro específico de criação de conta: $authError');
-
-          // Verificar se o erro é de email já em uso
-          if (authError.toString().contains('email-already-in-use')) {
-            // Se o email já existe, tentar fazer login diretamente
-            try {
-              userCredential = await _auth.signInWithEmailAndPassword(
-                email: email,
-                password: password,
-              );
-              print('Email já existe, login realizado com sucesso');
-            } catch (loginError) {
-              print('Erro ao tentar login com email existente: $loginError');
-              throw Exception(
-                  'Este email já está em uso, mas a senha não corresponde ao telefone informado.');
-            }
-          } else {
-            throw Exception(
-                'Erro ao criar conta. Verifique sua conexão e tente novamente.');
-          }
-        }
-
-        // Se chegou aqui, o usuário foi criado ou logado com sucesso
+        // Criar usuário no Firebase Auth
+        final userCredential = await _auth.createUserWithEmailAndPassword(
+          email: email,
+          password: password,
+        );
+        
+        // Se chegou aqui, o usuário foi criado com sucesso
         if (userCredential.user != null) {
+          // Salvar dados localmente
+          await _saveUserToLocal(email, phone);
+
+          // Atualizar estado do provider
+          _currentUser = app_models.User(
+            ra: email,
+            phone: phone,
+          );
+          _isAdminLoggedIn = false;
+          notifyListeners();
+
+          print('Usuário criado com sucesso');
+          
+          // Tentar salvar dados no Firestore, mas não falhar se não conseguir
           try {
-            // Salvar dados adicionais no Firestore
             await _firestore
                 .collection('users')
                 .doc(userCredential.user!.uid)
@@ -359,33 +229,65 @@ class ChatbotAuthProvider extends ChangeNotifier {
               'createdAt': FieldValue.serverTimestamp(),
               'lastLogin': FieldValue.serverTimestamp(),
             });
-
-            // Salvar dados localmente
-            await _saveUserToLocal(email, phone);
-
-            // Atualizar estado do provider
-            _currentUser = app_models.User(
-              ra: email,
-              phone: phone,
-            );
-            _isAdminLoggedIn = false;
-            notifyListeners();
-
-            print('Usuário criado/logado e dados salvos com sucesso');
+            print('Dados do usuário salvos no Firestore');
           } catch (firestoreError) {
             print('Erro ao salvar dados no Firestore: $firestoreError');
-            // Não excluir o usuário do Auth se falhar ao salvar no Firestore
-            // Apenas registrar o erro e continuar, pois o login já foi bem-sucedido
-            print(
-                'Continuando mesmo com erro no Firestore, usuário já está autenticado');
+            // Não interromper o fluxo por causa desse erro
           }
         } else {
           throw Exception('Erro ao criar usuário: objeto de usuário é nulo');
         }
       } catch (authError) {
-        print('Erro específico de criação de conta: $authError');
-        throw Exception(
-            'Erro ao criar conta. Verifique sua conexão e tente novamente.');
+        // Se o email já existe, tentar fazer login
+        if (authError is firebase_auth.FirebaseAuthException && 
+            authError.code == 'email-already-in-use') {
+          print('Email já existe, tentando login');
+          
+          try {
+            final userCredential = await _auth.signInWithEmailAndPassword(
+              email: email,
+              password: password,
+            );
+            
+            if (userCredential.user != null) {
+              // Login bem-sucedido
+              print('Login bem-sucedido para usuário existente');
+              
+              // Salvar dados localmente
+              await _saveUserToLocal(email, phone);
+              
+              _currentUser = app_models.User(
+                ra: email,
+                phone: phone,
+              );
+              _isAdminLoggedIn = false;
+              notifyListeners();
+              
+              // Tentar atualizar telefone no Firestore, mas não falhar se não conseguir
+              try {
+                await _firestore
+                    .collection('users')
+                    .doc(userCredential.user!.uid)
+                    .update({
+                  'phone': phone,
+                  'lastLogin': FieldValue.serverTimestamp(),
+                });
+                print('Telefone atualizado no Firestore');
+              } catch (e) {
+                print('Erro ao atualizar telefone no Firestore: $e');
+                // Não interromper o fluxo por causa desse erro
+              }
+              
+              return;
+            }
+          } catch (loginError) {
+            print('Erro ao tentar login com email existente: $loginError');
+            throw Exception('Este email já está em uso, mas a senha não corresponde ao telefone informado.');
+          }
+        } else {
+          print('Erro específico de criação de conta: $authError');
+          throw Exception('Erro ao criar conta. Verifique sua conexão e tente novamente.');
+        }
       }
     } catch (e) {
       print('Erro em _createUserAccount: $e');
@@ -430,49 +332,69 @@ class ChatbotAuthProvider extends ChangeNotifier {
 
       try {
         // Fazer login no Firebase
-        await _auth
-            .signInWithEmailAndPassword(
+        final userCredential = await _auth.signInWithEmailAndPassword(
           email: username,
           password: password,
-        )
-            .then((userCredential) async {
-          try {
-            // Verificar se o usuário é realmente admin no Firestore
-            final userDoc = await _firestore
-                .collection('users')
-                .doc(userCredential.user!.uid)
-                .get();
+        );
+        
+        // Definir como admin logado
+        _isAdminLoggedIn = true;
+        _currentUser = null;
+        notifyListeners();
+        
+        // Tentar verificar no Firestore, mas não falhar se não conseguir
+        try {
+          final userDoc = await _firestore
+              .collection('users')
+              .doc(userCredential.user!.uid)
+              .get();
 
-            if (userDoc.exists) {
-              final userData = userDoc.data();
-              final isAdmin = userData?['isAdmin'] ?? false;
+          if (userDoc.exists) {
+            final userData = userDoc.data();
+            final isAdmin = userData?['isAdmin'] ?? false;
 
-              if (isAdmin) {
-                _isAdminLoggedIn = true;
-                _currentUser = null;
-                notifyListeners();
-              } else {
-                // Se não for admin, fazer logout e lançar erro
-                await _auth.signOut();
-                throw Exception('Usuário não tem permissão de administrador');
+            if (!isAdmin) {
+              // Se não for admin no Firestore, tentar atualizar
+              try {
+                await _firestore
+                    .collection('users')
+                    .doc(userCredential.user!.uid)
+                    .update({
+                  'isAdmin': true,
+                  'lastLogin': FieldValue.serverTimestamp(),
+                });
+              } catch (e) {
+                print('Erro ao atualizar status de admin no Firestore: $e');
+                // Não interromper o fluxo por causa desse erro
               }
-            } else {
-              // Se falhar ao verificar no Firestore, fazer logout
-              await _auth.signOut();
-              throw Exception('Erro ao verificar permissões de administrador');
             }
-          } catch (firestoreError) {
-            print('Erro ao verificar admin no Firestore: $firestoreError');
-            await _auth.signOut();
-            throw Exception('Erro ao verificar permissões de administrador');
+          } else {
+            // Se o documento não existe, tentar criar
+            try {
+              await _firestore
+                  .collection('users')
+                  .doc(userCredential.user!.uid)
+                  .set({
+                'ra': username,
+                'isAdmin': true,
+                'createdAt': FieldValue.serverTimestamp(),
+                'lastLogin': FieldValue.serverTimestamp(),
+              });
+            } catch (e) {
+              print('Erro ao criar documento de admin no Firestore: $e');
+              // Não interromper o fluxo por causa desse erro
+            }
           }
-        });
+        } catch (firestoreError) {
+          print('Erro ao verificar admin no Firestore: $firestoreError');
+          // Não interromper o fluxo por causa desse erro
+        }
       } catch (authError) {
-        print('Erro ao fazer login admin: $authError');
-        throw Exception('Erro ao fazer login. Verifique suas credenciais.');
+        print('Erro ao fazer login administrativo: $authError');
+        throw Exception('Credenciais inválidas');
       }
     } catch (e) {
-      print('Erro ao fazer login admin: $e');
+      print('Erro em adminLogin: $e');
       rethrow;
     }
   }

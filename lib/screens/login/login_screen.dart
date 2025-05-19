@@ -24,6 +24,7 @@ class _LoginScreenState extends State<LoginScreen> {
   );
   
   bool _isLoading = false;
+  bool _showPhoneField = true; // Mostrar campo de telefone por padrão
   String? _errorMessage;
   
   @override
@@ -57,15 +58,22 @@ class _LoginScreenState extends State<LoginScreen> {
       final authProvider = Provider.of<ChatbotAuthProvider>(context, listen: false);
       await authProvider.login(user);
       
-      // Navegar para a tela inicial se o login for bem-sucedido
+      // Navegar para a tela apropriada com base no tipo de usuário
       if (context.mounted) {
-        Navigator.pushReplacementNamed(context, '/');
+        if (authProvider.isAdminLoggedIn) {
+          // Se for admin, ir para a tela de gerenciamento
+          Navigator.pushReplacementNamed(context, '/admin');
+        } else {
+          // Se for aluno, ir para a tela de chatbot
+          Navigator.pushReplacementNamed(context, '/chatbot');
+        }
       }
     } catch (e) {
       // Mostrar erro se ocorrer
       setState(() {
         _errorMessage = e.toString();
       });
+      print('Erro durante login na tela: $e');
     } finally {
       // Esconder loading
       if (mounted) {
@@ -145,13 +153,13 @@ class _LoginScreenState extends State<LoginScreen> {
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           Text(
-                            'Login',
+                            'Acesso ao Chatbot',
                             style: Theme.of(context).textTheme.displayMedium,
                             textAlign: TextAlign.center,
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            'Por favor, faça login para acessar o chatbot do restaurante.',
+                            'Por favor, faça login para acessar o chatbot.',
                             style: Theme.of(context)
                                 .textTheme
                                 .bodyMedium
@@ -171,7 +179,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             textInputAction: TextInputAction.next,
                           ),
                           const SizedBox(height: 16),
-                          // Campo de telefone
+                          // Campo de telefone - sempre visível
                           CustomTextField(
                             controller: _phoneController,
                             label: 'Telefone',
@@ -183,10 +191,34 @@ class _LoginScreenState extends State<LoginScreen> {
                             textInputAction: TextInputAction.done,
                             onFieldSubmitted: (_) => _login(),
                           ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Telefone necessário apenas no primeiro login',
+                            style: TextStyle(
+                              color: Colors.grey[600],
+                              fontSize: 12,
+                              fontStyle: FontStyle.italic,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          
+                          // Mensagem de erro
+                          if (_errorMessage != null) ...[
+                            const SizedBox(height: 16),
+                            Text(
+                              _errorMessage!,
+                              style: TextStyle(
+                                color: Colors.red[700],
+                                fontWeight: FontWeight.bold,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
+                          
                           const SizedBox(height: 24),
                           // Botão de login
                           CustomButton(
-                            text: 'Entrar',
+                            text: 'Continuar',
                             isLoading: _isLoading,
                             onPressed: _login,
                           ),

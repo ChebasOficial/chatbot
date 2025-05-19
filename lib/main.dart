@@ -7,8 +7,8 @@ import 'package:provider/provider.dart';
 
 // Import all screen files
 import 'package:chatbot/screens/inicio_screen.dart';
-import 'package:chatbot/screens/login_screen.dart';
-import 'package:chatbot/screens/admin_login_screen.dart';
+import 'package:chatbot/screens/login/login_screen.dart';
+import 'package:chatbot/screens/login/admin_login_screen.dart';
 import 'package:chatbot/screens/cardapio_screen.dart';
 import 'package:chatbot/screens/coluna_selection_screen.dart';
 import 'package:chatbot/screens/confirmation_ok_screen.dart';
@@ -17,6 +17,8 @@ import 'package:chatbot/screens/yes_no_confirmation_screen.dart';
 import 'package:chatbot/screens/contact_message_screen.dart';
 import 'package:chatbot/screens/finalizacao_screen.dart';
 import 'package:chatbot/screens/test_screen.dart';
+import 'package:chatbot/screens/chatbot/chatbot_screen.dart';
+import 'package:chatbot/screens/kitchen/kitchen_screen.dart';
 
 // Import providers
 import 'package:chatbot/providers/auth_provider.dart';
@@ -71,6 +73,8 @@ class MyApp extends StatelessWidget {
         '/contact': (context) => const ContactMessageScreen(),
         '/finalizacao': (context) => const FinalizacaoScreen(),
         '/test': (context) => const TestScreen(),
+        '/chatbot': (context) => const ChatbotScreen(),
+        '/admin': (context) => const KitchenScreen(),
       },
       // Adicionar observador de rotas para verificar autenticação
       navigatorObservers: [
