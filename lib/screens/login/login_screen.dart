@@ -1,33 +1,39 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
 import 'package:chatbot/providers/auth_provider.dart';
 import 'package:chatbot/utils/validators.dart';
 import 'package:chatbot/widgets/custom_button.dart';
 import 'package:chatbot/widgets/custom_text_field.dart';
+import 'package:chatbot/models/user.dart';
 
-class AdminLoginScreen extends StatefulWidget {
-  const AdminLoginScreen({Key? key}) : super(key: key);
+class LoginScreen extends StatefulWidget {
+  const LoginScreen({Key? key}) : super(key: key);
 
   @override
-  State<AdminLoginScreen> createState() => _AdminLoginScreenState();
+  State<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _AdminLoginScreenState extends State<AdminLoginScreen> {
+class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _usernameController = TextEditingController();
-  final _passwordController = TextEditingController();
-  bool _obscurePassword = true;
+  final _raController = TextEditingController();
+  final _phoneController = TextEditingController();
+  final _phoneMask = MaskTextInputFormatter(
+    mask: '(##) #####-####',
+    filter: {'#': RegExp(r'[0-9]')},
+  );
+  
   bool _isLoading = false;
   String? _errorMessage;
   
   @override
   void dispose() {
-    _usernameController.dispose();
-    _passwordController.dispose();
+    _raController.dispose();
+    _phoneController.dispose();
     super.dispose();
   }
   
-  Future<void> _adminLogin() async {
+  Future<void> _login() async {
     // Validar formulário
     if (!_formKey.currentState!.validate()) {
       return;
@@ -41,16 +47,19 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
     
     try {
       // Obter dados do formulário
-      final username = _usernameController.text.trim();
-      final password = _passwordController.text.trim();
+      final ra = _raController.text.trim();
+      final phone = _phoneController.text.trim();
       
-      // Fazer login administrativo no provider
+      // Criar objeto User para passar ao provider
+      final user = User(ra: ra, phone: phone);
+      
+      // Fazer login no provider
       final authProvider = Provider.of<ChatbotAuthProvider>(context, listen: false);
-      await authProvider.adminLogin(username, password);
+      await authProvider.login(user);
       
-      // Navegar para a tela de cozinha se o login for bem-sucedido
+      // Navegar para a tela inicial se o login for bem-sucedido
       if (context.mounted) {
-        Navigator.pushReplacementNamed(context, '/kitchen');
+        Navigator.pushReplacementNamed(context, '/');
       }
     } catch (e) {
       // Mostrar erro se ocorrer
@@ -122,7 +131,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                   ),
                 ),
                 const SizedBox(height: 32),
-                // Formulário de login administrativo
+                // Formulário de login
                 Card(
                   elevation: 4,
                   shape: RoundedRectangleBorder(
@@ -136,13 +145,13 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           Text(
-                            'Acesso Administrativo',
+                            'Login',
                             style: Theme.of(context).textTheme.displayMedium,
                             textAlign: TextAlign.center,
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            'Acesso restrito para funcionários da cozinha.',
+                            'Por favor, faça login para acessar o chatbot do restaurante.',
                             style: Theme.of(context)
                                 .textTheme
                                 .bodyMedium
@@ -152,55 +161,43 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                             textAlign: TextAlign.center,
                           ),
                           const SizedBox(height: 24),
-                          // Campo de usuário
+                          // Campo de R.A.
                           CustomTextField(
-                            controller: _usernameController,
-                            label: 'Usuário',
-                            hintText: 'admin@p4ed.com.br',
+                            controller: _raController,
+                            label: 'Registro Acadêmico (R.A.)',
+                            hintText: '12345678@p4ed.com.br',
                             prefixIcon: Icons.person,
-                            validator: Validators.validateAdminUsername,
+                            validator: Validators.validateRA,
                             textInputAction: TextInputAction.next,
                           ),
                           const SizedBox(height: 16),
-                          // Campo de senha
+                          // Campo de telefone
                           CustomTextField(
-                            controller: _passwordController,
-                            label: 'Senha',
-                            hintText: 'Digite sua senha',
-                            prefixIcon: Icons.lock,
-                            obscureText: _obscurePassword,
-                            validator: Validators.validatePassword,
+                            controller: _phoneController,
+                            label: 'Telefone',
+                            hintText: '(11) 98765-4321',
+                            prefixIcon: Icons.phone,
+                            keyboardType: TextInputType.phone,
+                            inputFormatters: [_phoneMask],
+                            validator: Validators.validatePhone,
                             textInputAction: TextInputAction.done,
-                            onFieldSubmitted: (_) => _adminLogin(),
-                            suffixIcon: IconButton(
-                              icon: Icon(
-                                _obscurePassword
-                                    ? Icons.visibility
-                                    : Icons.visibility_off,
-                                color: Colors.grey,
-                              ),
-                              onPressed: () {
-                                setState(() {
-                                  _obscurePassword = !_obscurePassword;
-                                });
-                              },
-                            ),
+                            onFieldSubmitted: (_) => _login(),
                           ),
                           const SizedBox(height: 24),
                           // Botão de login
                           CustomButton(
                             text: 'Entrar',
                             isLoading: _isLoading,
-                            onPressed: _adminLogin,
+                            onPressed: _login,
                           ),
                           const SizedBox(height: 16),
-                          // Link para login de aluno
+                          // Link para login administrativo
                           TextButton(
                             onPressed: () {
-                              Navigator.pushReplacementNamed(context, '/');
+                              Navigator.pushNamed(context, '/admin-login');
                             },
                             child: Text(
-                              'Voltar para login de aluno',
+                              'Acesso Administrativo',
                               style: TextStyle(
                                 color: Theme.of(context).primaryColor,
                               ),

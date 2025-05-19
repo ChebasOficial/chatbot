@@ -315,13 +315,38 @@ class ChatbotAuthProvider extends ChangeNotifier {
       final password = phone.replaceAll(RegExp(r'[^0-9]'), '');
 
       try {
-        // Criar usuário no Firebase Auth
-        await _auth
-            .createUserWithEmailAndPassword(
-          email: email,
-          password: password,
-        )
-            .then((userCredential) async {
+        // Criar usuário no Firebase Auth - usando try/catch em vez de then para melhor tratamento de erros
+        firebase_auth.UserCredential userCredential;
+        try {
+          userCredential = await _auth.createUserWithEmailAndPassword(
+            email: email,
+            password: password,
+          );
+        } catch (authError) {
+          print('Erro específico de criação de conta: $authError');
+
+          // Verificar se o erro é de email já em uso
+          if (authError.toString().contains('email-already-in-use')) {
+            // Se o email já existe, tentar fazer login diretamente
+            try {
+              userCredential = await _auth.signInWithEmailAndPassword(
+                email: email,
+                password: password,
+              );
+              print('Email já existe, login realizado com sucesso');
+            } catch (loginError) {
+              print('Erro ao tentar login com email existente: $loginError');
+              throw Exception(
+                  'Este email já está em uso, mas a senha não corresponde ao telefone informado.');
+            }
+          } else {
+            throw Exception(
+                'Erro ao criar conta. Verifique sua conexão e tente novamente.');
+          }
+        }
+
+        // Se chegou aqui, o usuário foi criado ou logado com sucesso
+        if (userCredential.user != null) {
           try {
             // Salvar dados adicionais no Firestore
             await _firestore
@@ -334,24 +359,29 @@ class ChatbotAuthProvider extends ChangeNotifier {
               'createdAt': FieldValue.serverTimestamp(),
               'lastLogin': FieldValue.serverTimestamp(),
             });
+
+            // Salvar dados localmente
+            await _saveUserToLocal(email, phone);
+
+            // Atualizar estado do provider
+            _currentUser = app_models.User(
+              ra: email,
+              phone: phone,
+            );
+            _isAdminLoggedIn = false;
+            notifyListeners();
+
+            print('Usuário criado/logado e dados salvos com sucesso');
           } catch (firestoreError) {
             print('Erro ao salvar dados no Firestore: $firestoreError');
-            // Se falhar ao salvar no Firestore, excluir o usuário do Auth
-            await userCredential.user?.delete();
-            throw Exception(
-                'Erro ao salvar dados do usuário. Tente novamente.');
+            // Não excluir o usuário do Auth se falhar ao salvar no Firestore
+            // Apenas registrar o erro e continuar, pois o login já foi bem-sucedido
+            print(
+                'Continuando mesmo com erro no Firestore, usuário já está autenticado');
           }
-
-          // Salvar dados localmente
-          await _saveUserToLocal(email, phone);
-
-          _currentUser = app_models.User(
-            ra: email,
-            phone: phone,
-          );
-          _isAdminLoggedIn = false;
-          notifyListeners();
-        });
+        } else {
+          throw Exception('Erro ao criar usuário: objeto de usuário é nulo');
+        }
       } catch (authError) {
         print('Erro específico de criação de conta: $authError');
         throw Exception(

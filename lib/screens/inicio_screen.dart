@@ -14,8 +14,7 @@ class InicioScreen extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        title:
-            const Text('Poliedro Food', style: TextStyle(color: Colors.black)),
+        title: const Text('Poliedro Food', style: TextStyle(color: Colors.black)),
         actions: [
           // Botão de Logout no AppBar para maior visibilidade
           TextButton.icon(
@@ -28,15 +27,14 @@ class InicioScreen extends StatelessWidget {
                     duration: Duration(seconds: 1),
                   ),
                 );
-
+                
                 // Fazer logout no provider
-                final authProvider =
-                    Provider.of<ChatbotAuthProvider>(context, listen: false);
+                final authProvider = Provider.of<ChatbotAuthProvider>(context, listen: false);
                 await authProvider.logout();
-
+                
                 // Garantir que o Firebase Auth também faça logout
                 await FirebaseAuth.instance.signOut();
-
+                
                 if (context.mounted) {
                   // Mostrar mensagem de sucesso
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -45,14 +43,13 @@ class InicioScreen extends StatelessWidget {
                       backgroundColor: Colors.green,
                     ),
                   );
-
+                  
                   // Navegar para a tela de login usando pushNamed
                   // Isso mantém a tela inicial na pilha, permitindo voltar para ela
                   Navigator.pushNamedAndRemoveUntil(
                     context,
                     '/login',
-                    (route) => route
-                        .isFirst, // Mantém apenas a primeira rota (tela inicial)
+                    (route) => route.isFirst, // Mantém apenas a primeira rota (tela inicial)
                   );
                 }
               } catch (e) {
@@ -109,8 +106,7 @@ class InicioScreen extends StatelessWidget {
                       // Navigate to Login Screen usando push normal para manter a pilha
                       Navigator.push(
                         context,
-                        MaterialPageRoute(
-                            builder: (context) => const LoginScreen()),
+                        MaterialPageRoute(builder: (context) => const LoginScreen()),
                       );
                     },
                     style: ElevatedButton.styleFrom(
@@ -139,16 +135,14 @@ class InicioScreen extends StatelessWidget {
                               duration: Duration(seconds: 1),
                             ),
                           );
-
+                          
                           // Fazer logout no provider
-                          final authProvider = Provider.of<ChatbotAuthProvider>(
-                              context,
-                              listen: false);
+                          final authProvider = Provider.of<ChatbotAuthProvider>(context, listen: false);
                           await authProvider.logout();
-
+                          
                           // Garantir que o Firebase Auth também faça logout
                           await FirebaseAuth.instance.signOut();
-
+                          
                           if (context.mounted) {
                             // Mostrar mensagem de sucesso
                             ScaffoldMessenger.of(context).showSnackBar(
@@ -157,14 +151,13 @@ class InicioScreen extends StatelessWidget {
                                 backgroundColor: Colors.green,
                               ),
                             );
-
+                            
                             // Navegar para a tela de login usando pushNamedAndRemoveUntil
                             // Isso mantém a tela inicial na pilha, permitindo voltar para ela
                             Navigator.pushNamedAndRemoveUntil(
                               context,
                               '/login',
-                              (route) => route
-                                  .isFirst, // Mantém apenas a primeira rota (tela inicial)
+                              (route) => route.isFirst, // Mantém apenas a primeira rota (tela inicial)
                             );
                           }
                         } catch (e) {
@@ -182,10 +175,7 @@ class InicioScreen extends StatelessWidget {
                       icon: const Icon(Icons.logout, color: Colors.white),
                       label: const Text(
                         'LOGOUT (TESTE)',
-                        style: TextStyle(
-                            fontSize: 16,
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold),
+                        style: TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.bold),
                       ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.red,
@@ -251,21 +241,19 @@ class InicioScreen extends StatelessWidget {
         onPressed: () async {
           try {
             // Fazer logout no provider
-            final authProvider =
-                Provider.of<ChatbotAuthProvider>(context, listen: false);
+            final authProvider = Provider.of<ChatbotAuthProvider>(context, listen: false);
             await authProvider.logout();
-
+            
             // Garantir que o Firebase Auth também faça logout
             await FirebaseAuth.instance.signOut();
-
+            
             if (context.mounted) {
               // Navegar para a tela de login usando pushNamedAndRemoveUntil
               // Isso mantém a tela inicial na pilha, permitindo voltar para ela
               Navigator.pushNamedAndRemoveUntil(
                 context,
                 '/login',
-                (route) => route
-                    .isFirst, // Mantém apenas a primeira rota (tela inicial)
+                (route) => route.isFirst, // Mantém apenas a primeira rota (tela inicial)
               );
             }
           } catch (e) {
