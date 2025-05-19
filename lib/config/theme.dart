@@ -85,11 +85,10 @@ class AppTheme {
       centerTitle: true,
     ),
     cardColor: Colors.white,
-    // Usando CardTheme como um objeto CardThemeData
-    cardTheme: CardThemeData(
+    cardTheme: const CardThemeData(
       elevation: 2,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.all(Radius.circular(10)),
       ),
     ),
   );

@@ -319,7 +319,7 @@ class _AdminProductsTabState extends State<AdminProductsTab> {
                     );
                   },
                 ),
-              ),
+              ),;
       floatingActionButton: FloatingActionButton(
         onPressed: () => _showAddEditDialog(),
         child: const Icon(Icons.add),

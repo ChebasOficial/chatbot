@@ -1,20 +1,19 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:intl/intl.dart';
 import 'package:chatbot/models/order.dart';
-import 'package:chatbot/models/order_status.dart';
 import 'package:chatbot/providers/auth_provider.dart';
 import 'package:chatbot/providers/order_provider.dart';
 import 'package:chatbot/widgets/custom_button.dart';
+import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 
 class KitchenScreen extends StatefulWidget {
   const KitchenScreen({Key? key}) : super(key: key);
 
   @override
-  State<KitchenScreen> createState() => KitchenScreenState();
+  State<KitchenScreen> createState() => _KitchenScreenState();
 }
 
-class KitchenScreenState extends State<KitchenScreen> with SingleTickerProviderStateMixin {
+class _KitchenScreenState extends State<KitchenScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
   
   @override
@@ -24,11 +23,15 @@ class KitchenScreenState extends State<KitchenScreen> with SingleTickerProviderS
     
     // Verificar se o administrador está logado
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final authProvider = Provider.of<ChatbotAuthProvider>(context, listen: false);
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
       if (!authProvider.isAdminLoggedIn) {
         Navigator.pushReplacementNamed(context, '/admin-login');
         return;
       }
+      
+      // Carregar pedidos
+      final orderProvider = Provider.of<OrderProvider>(context, listen: false);
+      orderProvider.initialize();
     });
   }
   
@@ -37,67 +40,197 @@ class KitchenScreenState extends State<KitchenScreen> with SingleTickerProviderS
     _tabController.dispose();
     super.dispose();
   }
-  
+
   @override
   Widget build(BuildContext context) {
-    final orderProvider = Provider.of<OrderProvider>(context);
-    final pendingOrders = orderProvider.pendingOrders;
-    final inProgressOrders = orderProvider.inProgressOrders;
-    final completedOrders = orderProvider.completedOrders;
-    
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Cozinha - Gerenciamento de Pedidos'),
-        bottom: TabBar(
-          controller: _tabController,
-          tabs: const [
-            Tab(text: 'Pendentes'),
-            Tab(text: 'Em Preparo'),
-            Tab(text: 'Concluídos'),
-          ],
-        ),
+        title: const Text('Painel da Cozinha'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.exit_to_app),
+            icon: const Icon(Icons.logout),
             onPressed: () async {
-              try {
-                // Fazer logout
-                await Provider.of<ChatbotAuthProvider>(context, listen: false).logout();
-                
-                // Redirecionar para a página inicial
-                if (context.mounted) {
-                  Navigator.pushReplacementNamed(context, '/');
-                }
-              } catch (e) {
-                // Mostrar erro se ocorrer
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Erro ao fazer logout: $e'),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
-                }
-              }
+              await Provider.of<AuthProvider>(context, listen: false).logout();
+              if (!mounted) return;
+              Navigator.pushReplacementNamed(context, '/admin-login');
             },
           ),
         ],
+        bottom: TabBar(
+          controller: _tabController,
+          tabs: const [
+            Tab(
+              icon: Icon(Icons.pending_actions),
+              text: 'Pendentes',
+            ),
+            Tab(
+              icon: Icon(Icons.restaurant),
+              text: 'Em Preparo',
+            ),
+            Tab(
+              icon: Icon(Icons.check_circle),
+              text: 'Concluídos',
+            ),
+          ],
+        ),
       ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          _buildOrderList(pendingOrders, OrderStatus.pending),
-          _buildOrderList(inProgressOrders, OrderStatus.inProgress),
-          _buildOrderList(completedOrders, OrderStatus.completed),
-        ],
+      body: Consumer<OrderProvider>(
+        builder: (context, orderProvider, child) {
+          return Column(
+            children: [
+              // Resumo financeiro
+              _buildFinancialSummary(orderProvider),
+              
+              // Lista de pedidos
+              Expanded(
+                child: TabBarView(
+                  controller: _tabController,
+                  children: [
+                    // Pedidos pendentes
+                    _buildOrdersList(
+                      orderProvider.pendingOrders,
+                      'Nenhum pedido pendente no momento.',
+                      (order) => _buildOrderCard(
+                        order,
+                        [
+                          CustomButton(
+                            text: 'Em Preparo',
+                            backgroundColor: Colors.blue,
+                            onPressed: () {
+                              orderProvider.updateOrderStatus(order.id, 'preparing');
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                    
+                    // Pedidos em preparo
+                    _buildOrdersList(
+                      orderProvider.preparingOrders,
+                      'Nenhum pedido em preparo no momento.',
+                      (order) => _buildOrderCard(
+                        order,
+                        [
+                          CustomButton(
+                            text: 'Concluído',
+                            backgroundColor: Colors.green,
+                            onPressed: () {
+                              orderProvider.updateOrderStatus(order.id, 'completed');
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                    
+                    // Pedidos concluídos
+                    _buildOrdersList(
+                      orderProvider.completedOrders,
+                      'Nenhum pedido concluído no momento.',
+                      (order) => _buildOrderCard(order, []),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
   
-  Widget _buildOrderList(List<Order> orders, OrderStatus status) {
+  // Construir resumo financeiro
+  Widget _buildFinancialSummary(OrderProvider orderProvider) {
+    final currencyFormat = NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$');
+    
+    return Card(
+      margin: const EdgeInsets.all(16),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.payments, color: Colors.green),
+                const SizedBox(width: 8),
+                Text(
+                  'Resumo Financeiro',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+              ],
+            ),
+            const Divider(),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('Pedidos Pendentes:'),
+                Text(currencyFormat.format(orderProvider.pendingTotal)),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('Pedidos Em Preparo:'),
+                Text(currencyFormat.format(orderProvider.preparingTotal)),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('Pedidos Concluídos:'),
+                Text(currencyFormat.format(orderProvider.completedTotal)),
+              ],
+            ),
+            const Divider(),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Total do Dia:',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                Text(
+                  currencyFormat.format(orderProvider.dayTotal),
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: Colors.green,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+  
+  // Construir lista de pedidos
+  Widget _buildOrdersList(
+    List<Order> orders,
+    String emptyMessage,
+    Widget Function(Order) itemBuilder,
+  ) {
     if (orders.isEmpty) {
-      return const Center(
-        child: Text('Nenhum pedido nesta categoria.'),
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.receipt_long,
+              size: 64,
+              color: Colors.grey[400],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              emptyMessage,
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.grey[600],
+              ),
+            ),
+          ],
+        ),
       );
     }
     
@@ -106,145 +239,130 @@ class KitchenScreenState extends State<KitchenScreen> with SingleTickerProviderS
       itemCount: orders.length,
       itemBuilder: (context, index) {
         final order = orders[index];
-        return Card(
-          margin: const EdgeInsets.only(bottom: 16),
-          child: Padding(
+        return itemBuilder(order);
+      },
+    );
+  }
+  
+  // Construir cartão de pedido
+  Widget _buildOrderCard(Order order, List<Widget> actions) {
+    final dateFormat = DateFormat('dd/MM/yyyy HH:mm');
+    final currencyFormat = NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$');
+    
+    return Card(
+      margin: const EdgeInsets.only(bottom: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Cabeçalho do pedido
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.grey[100],
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(4),
+                topRight: Radius.circular(4),
+              ),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Pedido #${order.id.substring(order.id.length - 5)}',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Text(
+                  dateFormat.format(order.timestamp),
+                  style: TextStyle(
+                    color: Colors.grey[600],
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          
+          // Detalhes do pedido
+          Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // R.A. do cliente
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
+                    const Icon(Icons.person, size: 16, color: Colors.grey),
+                    const SizedBox(width: 8),
                     Text(
-                      'Pedido #${order.id}',
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    Text(
-                      DateFormat('dd/MM/yyyy HH:mm').format(order.timestamp),
+                      order.ra,
                       style: TextStyle(
-                        color: Colors.grey[600],
+                        color: Colors.grey[700],
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 8),
-                const Divider(),
-                const SizedBox(height: 8),
+                const SizedBox(height: 16),
+                
+                // Itens do pedido
                 ...order.items.map((item) => Padding(
                   padding: const EdgeInsets.only(bottom: 8),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('${item.quantity}x ${item.name}'),
-                      Text(
-                        'R\$ ${(item.price * item.quantity).toStringAsFixed(2)}',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
+                      Text('${item.quantity}x ${item.menuItem.name}'),
+                      Text(currencyFormat.format(item.total)),
                     ],
                   ),
-                )).toList(),
-                const SizedBox(height: 8),
-                const Divider(),
-                const SizedBox(height: 8),
+                )),
+                
+                // Total
+                const Divider(height: 24),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     const Text(
                       'Total:',
                       style: TextStyle(
-                        fontSize: 16,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                     Text(
-                      'R\$ ${order.total.toStringAsFixed(2)}',
+                      currencyFormat.format(order.total),
                       style: const TextStyle(
-                        fontSize: 16,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 16),
-                if (order.notes.isNotEmpty) ...[
-                  Text(
-                    'Observações:',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.grey[700],
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    order.notes,
-                    style: TextStyle(
-                      fontStyle: FontStyle.italic,
-                      color: Colors.grey[600],
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                ],
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: _buildActionButtons(order, status),
-                ),
               ],
             ),
           ),
-        );
-      },
+          
+          // Ações
+          if (actions.isNotEmpty)
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.grey[100],
+                borderRadius: const BorderRadius.only(
+                  bottomLeft: Radius.circular(4),
+                  bottomRight: Radius.circular(4),
+                ),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: actions.map((action) {
+                  return Padding(
+                    padding: const EdgeInsets.only(left: 8),
+                    child: action,
+                  );
+                }).toList(),
+              ),
+            ),
+        ],
+      ),
     );
-  }
-  
-  List<Widget> _buildActionButtons(Order order, OrderStatus status) {
-    final orderProvider = Provider.of<OrderProvider>(context, listen: false);
-    
-    switch (status) {
-      case OrderStatus.pending:
-        return [
-          CustomButton(
-            text: 'Iniciar Preparo',
-            onPressed: () {
-              orderProvider.updateOrderStatus(order.id, OrderStatus.inProgress);
-            },
-            backgroundColor: Colors.blue,
-          ),
-          CustomButton(
-            text: 'Cancelar',
-            onPressed: () {
-              orderProvider.cancelOrder(order.id);
-            },
-            backgroundColor: Colors.red,
-          ),
-        ];
-      case OrderStatus.inProgress:
-        return [
-          CustomButton(
-            text: 'Concluir',
-            onPressed: () {
-              orderProvider.updateOrderStatus(order.id, OrderStatus.completed);
-            },
-            backgroundColor: Colors.green,
-          ),
-        ];
-      case OrderStatus.completed:
-        return [
-          CustomButton(
-            text: 'Arquivar',
-            onPressed: () {
-              orderProvider.archiveOrder(order.id);
-            },
-            backgroundColor: Colors.grey,
-          ),
-        ];
-      default:
-        return [];
-    }
   }
 }

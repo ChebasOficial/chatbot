@@ -24,90 +24,70 @@ class ConfirmationScreen extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               const Icon(
-                Icons.check_circle,
+                Icons.check_circle_outline,
                 color: Colors.green,
-                size: 80,
+                size: 100.0,
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 24.0),
               const Text(
-                'Pedido Realizado com Sucesso!',
+                'Pedido realizado com sucesso!',
                 style: TextStyle(
-                  fontSize: 24,
+                  fontSize: 24.0,
                   fontWeight: FontWeight.bold,
                 ),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 16.0),
               Text(
-                'Obrigado pela sua compra!',
+                'Número do pedido:',
                 style: TextStyle(
-                  fontSize: 18,
+                  fontSize: 18.0,
                   color: Colors.grey[700],
+                ),
+              ),
+              const SizedBox(height: 8.0),
+              Text(
+                orderId,
+                style: const TextStyle(
+                  fontSize: 20.0,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 24.0),
+              Text(
+                'Valor total: R\$ ${totalValue.toStringAsFixed(2)}',
+                style: const TextStyle(
+                  fontSize: 20.0,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.green,
+                ),
+              ),
+              const SizedBox(height: 32.0),
+              const Text(
+                'Agradecemos pela sua compra!',
+                style: TextStyle(
+                  fontSize: 18.0,
                 ),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 32),
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.grey[200],
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Column(
-                  children: [
-                    const Text(
-                      'Número do Pedido:',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.grey,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      orderId,
-                      style: const TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'Valor Total:',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.grey,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'R\$ ${totalValue.toStringAsFixed(2)}',
-                      style: const TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.teal,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 32),
+              const SizedBox(height: 48.0),
               ElevatedButton(
                 onPressed: () {
                   Navigator.pushNamedAndRemoveUntil(
                     context,
-                    '/',
+                    '/inicio',
                     (route) => false,
                   );
                 },
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 32,
-                    vertical: 16,
+                    horizontal: 32.0,
+                    vertical: 16.0,
                   ),
                 ),
                 child: const Text(
                   'Voltar para o Início',
-                  style: TextStyle(fontSize: 16),
+                  style: TextStyle(fontSize: 18.0),
                 ),
               ),
             ],
