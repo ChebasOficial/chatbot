@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:chatbot/providers/auth_provider.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class InicioScreen extends StatelessWidget {
   const InicioScreen({super.key});
@@ -7,6 +10,59 @@ class InicioScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        title: const Text('Poliedro Food', style: TextStyle(color: Colors.black)),
+        actions: [
+          // Botão de Logout no AppBar para maior visibilidade
+          TextButton.icon(
+            onPressed: () async {
+              try {
+                // Mostrar indicador de carregamento
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Fazendo logout...'),
+                    duration: Duration(seconds: 1),
+                  ),
+                );
+                
+                // Fazer logout no provider
+                final authProvider = Provider.of<ChatbotAuthProvider>(context, listen: false);
+                await authProvider.logout();
+                
+                // Garantir que o Firebase Auth também faça logout
+                await FirebaseAuth.instance.signOut();
+                
+                if (context.mounted) {
+                  // Mostrar mensagem de sucesso
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Logout realizado com sucesso!'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                  
+                  // Navegar para a tela de login
+                  Navigator.pushReplacementNamed(context, '/login');
+                }
+              } catch (e) {
+                // Mostrar erro se ocorrer
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Erro ao fazer logout: $e'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
+            },
+            icon: const Icon(Icons.logout, color: Colors.red),
+            label: const Text('Logout', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 40.0, vertical: 20.0),
@@ -56,7 +112,67 @@ class InicioScreen extends StatelessWidget {
                       style: TextStyle(fontSize: 18, color: Colors.black87),
                     ),
                   ),
-                  const SizedBox(height: 30),
+                  const SizedBox(height: 15),
+                  // Botão de Logout para Teste (grande e visível)
+                  Container(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () async {
+                        try {
+                          // Mostrar indicador de carregamento
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Fazendo logout...'),
+                              duration: Duration(seconds: 1),
+                            ),
+                          );
+                          
+                          // Fazer logout no provider
+                          final authProvider = Provider.of<ChatbotAuthProvider>(context, listen: false);
+                          await authProvider.logout();
+                          
+                          // Garantir que o Firebase Auth também faça logout
+                          await FirebaseAuth.instance.signOut();
+                          
+                          if (context.mounted) {
+                            // Mostrar mensagem de sucesso
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Logout realizado com sucesso!'),
+                                backgroundColor: Colors.green,
+                              ),
+                            );
+                            
+                            // Navegar para a tela de login
+                            Navigator.pushReplacementNamed(context, '/login');
+                          }
+                        } catch (e) {
+                          // Mostrar erro se ocorrer
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Erro ao fazer logout: $e'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          }
+                        }
+                      },
+                      icon: const Icon(Icons.logout, color: Colors.white),
+                      label: const Text(
+                        'LOGOUT (TESTE)',
+                        style: TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.bold),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 15),
                   // Placeholder for Weather/Info Card
                   Container(
                     padding: const EdgeInsets.all(15),
@@ -105,6 +221,37 @@ class InicioScreen extends StatelessWidget {
             ],
           ),
         ),
+      ),
+      // Botão flutuante de logout para garantir visibilidade
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () async {
+          try {
+            // Fazer logout no provider
+            final authProvider = Provider.of<ChatbotAuthProvider>(context, listen: false);
+            await authProvider.logout();
+            
+            // Garantir que o Firebase Auth também faça logout
+            await FirebaseAuth.instance.signOut();
+            
+            if (context.mounted) {
+              // Navegar para a tela de login
+              Navigator.pushReplacementNamed(context, '/login');
+            }
+          } catch (e) {
+            // Mostrar erro se ocorrer
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Erro ao fazer logout: $e'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+          }
+        },
+        backgroundColor: Colors.red,
+        icon: const Icon(Icons.logout),
+        label: const Text('LOGOUT'),
       ),
     );
   }
