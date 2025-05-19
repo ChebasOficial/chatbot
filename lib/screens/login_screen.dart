@@ -7,6 +7,7 @@ import 'package:chatbot/widgets/custom_button.dart';
 import 'package:chatbot/widgets/custom_text_field.dart';
 import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
 import 'package:provider/provider.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
@@ -20,6 +21,8 @@ class _LoginScreenState extends State<LoginScreen> {
   final _raController = TextEditingController();
   final _phoneController = TextEditingController();
   bool _isLoading = false;
+  bool _isFirstLogin = false;
+  String? _errorMessage;
 
   final _phoneMask = MaskTextInputFormatter(
     mask: '(##) #####-####',
@@ -32,7 +35,7 @@ class _LoginScreenState extends State<LoginScreen> {
     // Verificar se o usuário já está logado
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final authProvider = Provider.of<ChatbotAuthProvider>(context, listen: false);
-      if (authProvider.isLoggedIn) {
+      if (authProvider.isLoggedIn && !authProvider.isAdminLoggedIn) {
         Navigator.pushReplacementNamed(context, '/cardapio');
       }
     });
@@ -45,10 +48,39 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
+  // Verificar se é o primeiro login do usuário
+  Future<void> _checkIfFirstLogin() async {
+    if (_raController.text.isEmpty) return;
+    
+    setState(() {
+      _isLoading = true;
+    });
+    
+    try {
+      // Buscar usuário pelo email no Firestore
+      final querySnapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .where('ra', isEqualTo: _raController.text.trim())
+          .limit(1)
+          .get();
+      
+      setState(() {
+        _isFirstLogin = querySnapshot.docs.isEmpty;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isFirstLogin = true;
+        _isLoading = false;
+      });
+    }
+  }
+
   Future<void> _login() async {
     if (_formKey.currentState?.validate() ?? false) {
       setState(() {
         _isLoading = true;
+        _errorMessage = null;
       });
 
       try {
@@ -64,6 +96,10 @@ class _LoginScreenState extends State<LoginScreen> {
         Navigator.pushReplacementNamed(context, '/cardapio');
       } catch (e) {
         if (!mounted) return;
+        setState(() {
+          _errorMessage = e.toString();
+        });
+        
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Erro ao fazer login: ${e.toString()}'),
@@ -150,28 +186,76 @@ class _LoginScreenState extends State<LoginScreen> {
                             prefixIcon: Icons.person,
                             validator: Validators.validateRA,
                             textInputAction: TextInputAction.next,
+                            onFieldSubmitted: (_) => _checkIfFirstLogin(),
                           ),
                           const SizedBox(height: 16),
                           
-                          // Campo de telefone
-                          CustomTextField(
-                            controller: _phoneController,
-                            label: 'Telefone',
-                            hintText: '(11) 98765-4321',
-                            prefixIcon: Icons.phone,
-                            keyboardType: TextInputType.phone,
-                            inputFormatters: [_phoneMask],
-                            validator: Validators.validatePhone,
-                            textInputAction: TextInputAction.done,
-                            onFieldSubmitted: (_) => _login(),
-                          ),
-                          const SizedBox(height: 24),
+                          // Campo de telefone (visível apenas no primeiro login)
+                          if (_isFirstLogin)
+                            Column(
+                              children: [
+                                CustomTextField(
+                                  controller: _phoneController,
+                                  label: 'Telefone',
+                                  hintText: '(11) 98765-4321',
+                                  prefixIcon: Icons.phone,
+                                  keyboardType: TextInputType.phone,
+                                  inputFormatters: [_phoneMask],
+                                  validator: Validators.validatePhone,
+                                  textInputAction: TextInputAction.done,
+                                  onFieldSubmitted: (_) => _login(),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Telefone necessário apenas no primeiro login',
+                                  style: TextStyle(
+                                    color: Colors.grey[600],
+                                    fontSize: 12,
+                                    fontStyle: FontStyle.italic,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ],
+                            ),
+                          
+                          // Mensagem de erro
+                          if (_errorMessage != null)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 8.0),
+                              child: Text(
+                                _errorMessage!,
+                                style: TextStyle(
+                                  color: Theme.of(context).colorScheme.error,
+                                  fontSize: 12,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          
+                          const SizedBox(height: 16),
+                          
+                          // Botão para verificar se é primeiro login
+                          if (!_isFirstLogin && _raController.text.isNotEmpty)
+                            OutlinedButton(
+                              onPressed: _checkIfFirstLogin,
+                              child: const Text('Verificar Cadastro'),
+                            ),
+                          
+                          const SizedBox(height: 16),
                           
                           // Botão de login
                           CustomButton(
                             text: 'Continuar',
                             isLoading: _isLoading,
-                            onPressed: _login,
+                            onPressed: () {
+                              if (!_isFirstLogin && _raController.text.isNotEmpty) {
+                                _login();
+                              } else if (_isFirstLogin) {
+                                _login();
+                              } else {
+                                _checkIfFirstLogin();
+                              }
+                            },
                           ),
                           const SizedBox(height: 16),
                           

@@ -19,6 +19,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
   final _passwordController = TextEditingController();
   bool _isLoading = false;
   bool _obscurePassword = true;
+  String? _errorMessage;
 
   @override
   void initState() {
@@ -43,6 +44,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
     if (_formKey.currentState?.validate() ?? false) {
       setState(() {
         _isLoading = true;
+        _errorMessage = null;
       });
 
       try {
@@ -56,6 +58,10 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
         Navigator.pushReplacementNamed(context, '/cardapio');
       } catch (e) {
         if (!mounted) return;
+        setState(() {
+          _errorMessage = e.toString();
+        });
+        
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Erro ao fazer login: ${e.toString()}'),
@@ -167,7 +173,23 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                               },
                             ),
                           ),
-                          const SizedBox(height: 24),
+                          const SizedBox(height: 8),
+                          
+                          // Mensagem de erro
+                          if (_errorMessage != null)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 8.0),
+                              child: Text(
+                                _errorMessage!,
+                                style: TextStyle(
+                                  color: Theme.of(context).colorScheme.error,
+                                  fontSize: 12,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          
+                          const SizedBox(height: 16),
                           
                           // Botão de login
                           CustomButton(
