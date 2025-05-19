@@ -1,13 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_storage/firebase_storage.dart';
-import 'dart:io';
-import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:chatbot/providers/auth_provider.dart';
 import 'package:chatbot/models/menu_item.dart';
 import 'package:chatbot/widgets/custom_button.dart';
-import 'package:uuid/uuid.dart';
 
 class AdminProductsScreen extends StatefulWidget {
   const AdminProductsScreen({Key? key}) : super(key: key);
@@ -18,8 +14,6 @@ class AdminProductsScreen extends StatefulWidget {
 
 class _AdminProductsScreenState extends State<AdminProductsScreen> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final FirebaseStorage _storage = FirebaseStorage.instance;
-  final ImagePicker _picker = ImagePicker();
   
   List<MenuItem> _menuItems = [];
   bool _isLoading = true;
@@ -108,22 +102,8 @@ class _AdminProductsScreenState extends State<AdminProductsScreen> {
         return;
       }
       
-      // Buscar o item para verificar se tem imagem
-      final item = _menuItems.firstWhere((item) => item.id == id);
-      
       // Excluir do Firestore
       await _firestore.collection('menu_items').doc(id).delete();
-      
-      // Se tiver imagem, excluir do Storage
-      if (item.imageUrl.isNotEmpty) {
-        try {
-          final ref = _storage.refFromURL(item.imageUrl);
-          await ref.delete();
-        } catch (e) {
-          print('Erro ao excluir imagem: $e');
-          // Não interromper o fluxo por causa desse erro
-        }
-      }
       
       // Atualizar lista local
       setState(() {
@@ -248,38 +228,6 @@ class _AdminProductsScreenState extends State<AdminProductsScreen> {
                           child: Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              // Imagem do produto
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(8),
-                                child: item.imageUrl.isNotEmpty
-                                    ? Image.network(
-                                        item.imageUrl,
-                                        width: 80,
-                                        height: 80,
-                                        fit: BoxFit.cover,
-                                        errorBuilder: (context, error, stackTrace) {
-                                          return Container(
-                                            width: 80,
-                                            height: 80,
-                                            color: Colors.grey[300],
-                                            child: const Icon(
-                                              Icons.error,
-                                              color: Colors.red,
-                                            ),
-                                          );
-                                        },
-                                      )
-                                    : Container(
-                                        width: 80,
-                                        height: 80,
-                                        color: Colors.grey[300],
-                                        child: const Icon(
-                                          Icons.image,
-                                          color: Colors.grey,
-                                        ),
-                                      ),
-                              ),
-                              const SizedBox(width: 16),
                               // Informações do produto
                               Expanded(
                                 child: Column(
@@ -300,25 +248,12 @@ class _AdminProductsScreenState extends State<AdminProductsScreen> {
                                       ),
                                     ),
                                     const SizedBox(height: 8),
-                                    Row(
-                                      children: [
-                                        Text(
-                                          r'R$ ${item.price.toStringAsFixed(2)}',
-                                          style: const TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            color: Colors.teal,
-                                          ),
-                                        ),
-                                        const SizedBox(width: 16),
-                                        Text(
-                                          'Quantidade: ${item.quantity}',
-                                          style: TextStyle(
-                                            color: item.quantity > 0
-                                                ? Colors.green
-                                                : Colors.red,
-                                          ),
-                                        ),
-                                      ],
+                                    Text(
+                                      'R\$ ${item.price.toStringAsFixed(2)}',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.teal,
+                                      ),
                                     ),
                                   ],
                                 ),
@@ -371,14 +306,9 @@ class _AddEditMenuItemDialogState extends State<AddEditMenuItemDialog> {
   final _nameController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _priceController = TextEditingController();
-  final _quantityController = TextEditingController();
   
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final FirebaseStorage _storage = FirebaseStorage.instance;
-  final ImagePicker _picker = ImagePicker();
   
-  String _imageUrl = '';
-  File? _imageFile;
   bool _isLoading = false;
   
   @override
@@ -390,11 +320,6 @@ class _AddEditMenuItemDialogState extends State<AddEditMenuItemDialog> {
       _nameController.text = widget.item!.name;
       _descriptionController.text = widget.item!.description;
       _priceController.text = widget.item!.price.toString();
-      _quantityController.text = widget.item!.quantity.toString();
-      _imageUrl = widget.item!.imageUrl;
-    } else {
-      // Valores padrão para novo item
-      _quantityController.text = '0';
     }
   }
   
@@ -403,73 +328,10 @@ class _AddEditMenuItemDialogState extends State<AddEditMenuItemDialog> {
     _nameController.dispose();
     _descriptionController.dispose();
     _priceController.dispose();
-    _quantityController.dispose();
     super.dispose();
   }
   
-  Future<void> _pickImage() async {
-    try {
-      final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
-      
-      if (pickedFile != null) {
-        setState(() {
-          _imageFile = File(pickedFile.path);
-        });
-      }
-    } catch (e) {
-      print('Erro ao selecionar imagem: $e');
-      
-      // Mostrar erro
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Erro ao selecionar imagem: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
-  }
-  
-  Future<String> _uploadImage() async {
-    if (_imageFile == null) {
-      return _imageUrl; // Manter URL atual se não houver nova imagem
-    }
-    
-    try {
-      // Gerar nome único para o arquivo
-      final fileName = '${DateTime.now().millisecondsSinceEpoch}_${const Uuid().v4()}.jpg';
-      
-      // Criar referência para o arquivo no Storage
-      final ref = _storage.ref().child('menu_items').child(fileName);
-      
-      // Fazer upload
-      final uploadTask = ref.putFile(_imageFile!);
-      final snapshot = await uploadTask;
-      
-      // Obter URL de download
-      final downloadUrl = await snapshot.ref.getDownloadURL();
-      
-      return downloadUrl;
-    } catch (e) {
-      print('Erro ao fazer upload da imagem: $e');
-      
-      // Se falhar o upload, retornar URL atual ou vazio
-      if (_imageUrl.isNotEmpty) {
-        return _imageUrl;
-      }
-      
-      // Mostrar erro específico para o usuário
-      if (e.toString().contains('permission-denied')) {
-        throw Exception('Permissão negada para upload de imagem. Verifique as regras de segurança do Firebase Storage.');
-      }
-      
-      throw Exception('Erro ao fazer upload da imagem. Tente novamente mais tarde.');
-    }
-  }
-  
-  Future<void> _saveMenuItem() async {
-    // Validar formulário
+  Future<void> _saveItem() async {
     if (!_formKey.currentState!.validate()) {
       return;
     }
@@ -479,95 +341,62 @@ class _AddEditMenuItemDialogState extends State<AddEditMenuItemDialog> {
     });
     
     try {
-      // Obter dados do formulário
+      // Preparar dados do item
       final name = _nameController.text.trim();
       final description = _descriptionController.text.trim();
-      final price = double.parse(_priceController.text.trim());
-      final quantity = int.parse(_quantityController.text.trim());
+      final price = double.tryParse(_priceController.text) ?? 0.0;
       
-      // Fazer upload da imagem se houver
-      String imageUrl = _imageUrl;
-      try {
-        if (_imageFile != null) {
-          imageUrl = await _uploadImage();
-        }
-      } catch (uploadError) {
-        print('Erro no upload da imagem, continuando sem imagem: $uploadError');
-        // Continuar sem imagem se o upload falhar
+      // Dados para salvar no Firestore
+      final Map<String, dynamic> itemData = {
+        'name': name,
+        'description': description,
+        'price': price,
+        'updatedAt': FieldValue.serverTimestamp(),
+      };
+      
+      // Se for novo item, adicionar data de criação
+      if (widget.item == null) {
+        itemData['createdAt'] = FieldValue.serverTimestamp();
       }
       
-      // Criar ou atualizar item no Firestore
-      late MenuItem savedItem;
+      // Salvar no Firestore
+      String itemId;
+      if (widget.item == null) {
+        // Novo item
+        final docRef = await _firestore.collection('menu_items').add(itemData);
+        itemId = docRef.id;
+      } else {
+        // Atualizar item existente
+        itemId = widget.item!.id;
+        await _firestore.collection('menu_items').doc(itemId).update(itemData);
+      }
       
-      try {
-        if (widget.item == null) {
-          // Criar novo item
-          final docRef = await _firestore.collection('menu_items').add({
-            'name': name,
-            'description': description,
-            'price': price,
-            'quantity': quantity,
-            'imageUrl': imageUrl,
-            'createdAt': FieldValue.serverTimestamp(),
-          });
-          
-          savedItem = MenuItem(
-            id: docRef.id,
-            name: name,
-            description: description,
-            price: price,
-            quantity: quantity,
-            imageUrl: imageUrl,
-          );
-        } else {
-          // Atualizar item existente
-          await _firestore.collection('menu_items').doc(widget.item!.id).update({
-            'name': name,
-            'description': description,
-            'price': price,
-            'quantity': quantity,
-            'imageUrl': imageUrl,
-            'updatedAt': FieldValue.serverTimestamp(),
-          });
-          
-          savedItem = MenuItem(
-            id: widget.item!.id,
-            name: name,
-            description: description,
-            price: price,
-            quantity: quantity,
-            imageUrl: imageUrl,
-          );
-        }
+      // Criar objeto MenuItem para retornar
+      final newItem = MenuItem(
+        id: itemId,
+        name: name,
+        description: description,
+        price: price,
+        imageUrl: widget.item?.imageUrl ?? '',
+        quantity: widget.item?.quantity ?? 0,
+      );
+      
+      // Chamar callback de salvamento
+      widget.onSave(newItem);
+      
+      // Fechar diálogo
+      if (mounted) {
+        Navigator.pop(context);
         
-        // Chamar callback de salvamento
-        widget.onSave(savedItem);
-        
-        // Fechar diálogo
-        if (mounted) {
-          Navigator.pop(context);
-          
-          // Mostrar mensagem de sucesso
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(widget.item == null
-                  ? 'Item adicionado com sucesso!'
-                  : 'Item atualizado com sucesso!'),
-              backgroundColor: Colors.green,
-            ),
-          );
-        }
-      } catch (firestoreError) {
-        print('Erro ao salvar no Firestore: $firestoreError');
-        
-        // Tratar erro de permissão especificamente
-        if (firestoreError.toString().contains('permission-denied')) {
-          throw Exception(
-            'Permissão negada para salvar item no cardápio. Verifique se você está logado como administrador e se as regras de segurança do Firestore permitem escrita na coleção "menu_items".'
-          );
-        }
-        
-        throw Exception('Erro ao salvar item no cardápio. Tente novamente mais tarde.');
+        // Mostrar mensagem de sucesso
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(widget.item == null
+                ? 'Item adicionado com sucesso!'
+                : 'Item atualizado com sucesso!'),
+            backgroundColor: Colors.green,
+          ),
+        );
       }
     } catch (e) {
       print('Erro ao salvar item: $e');
@@ -600,74 +429,22 @@ class _AddEditMenuItemDialogState extends State<AddEditMenuItemDialog> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Imagem
-              GestureDetector(
-                onTap: _pickImage,
-                child: Container(
-                  width: 120,
-                  height: 120,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[200],
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.grey),
-                  ),
-                  child: _imageFile != null
-                      ? ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: Image.file(
-                            _imageFile!,
-                            fit: BoxFit.cover,
-                          ),
-                        )
-                      : _imageUrl.isNotEmpty
-                          ? ClipRRect(
-                              borderRadius: BorderRadius.circular(8),
-                              child: Image.network(
-                                _imageUrl,
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) {
-                                  return const Center(
-                                    child: Icon(
-                                      Icons.error,
-                                      color: Colors.red,
-                                    ),
-                                  );
-                                },
-                              ),
-                            )
-                          : const Center(
-                              child: Icon(
-                                Icons.add_a_photo,
-                                size: 40,
-                                color: Colors.grey,
-                              ),
-                            ),
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Toque para selecionar uma imagem',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey[600],
-                ),
-              ),
-              const SizedBox(height: 16),
               // Nome
               TextFormField(
                 controller: _nameController,
                 decoration: const InputDecoration(
-                  labelText: 'Nome do item',
+                  labelText: 'Nome',
                   border: OutlineInputBorder(),
                 ),
                 validator: (value) {
-                  if (value == null || value.isEmpty) {
+                  if (value == null || value.trim().isEmpty) {
                     return 'Por favor, informe o nome do item';
                   }
                   return null;
                 },
               ),
               const SizedBox(height: 16),
+              
               // Descrição
               TextFormField(
                 controller: _descriptionController,
@@ -677,57 +454,32 @@ class _AddEditMenuItemDialogState extends State<AddEditMenuItemDialog> {
                 ),
                 maxLines: 3,
                 validator: (value) {
-                  if (value == null || value.isEmpty) {
+                  if (value == null || value.trim().isEmpty) {
                     return 'Por favor, informe a descrição do item';
                   }
                   return null;
                 },
               ),
               const SizedBox(height: 16),
+              
               // Preço
               TextFormField(
                 controller: _priceController,
                 decoration: const InputDecoration(
-                  labelText: r'Preço (R$)',
+                  labelText: 'Preço (R$)',
                   border: OutlineInputBorder(),
                 ),
-                keyboardType: TextInputType.number,
+                keyboardType: TextInputType.numberWithOptions(decimal: true),
                 validator: (value) {
-                  if (value == null || value.isEmpty) {
+                  if (value == null || value.trim().isEmpty) {
                     return 'Por favor, informe o preço do item';
                   }
-                  try {
-                    final price = double.parse(value);
-                    if (price <= 0) {
-                      return 'O preço deve ser maior que zero';
-                    }
-                  } catch (e) {
-                    return 'Por favor, informe um valor válido';
+                  
+                  final price = double.tryParse(value);
+                  if (price == null || price <= 0) {
+                    return 'Por favor, informe um preço válido';
                   }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-              // Quantidade
-              TextFormField(
-                controller: _quantityController,
-                decoration: const InputDecoration(
-                  labelText: 'Quantidade disponível',
-                  border: OutlineInputBorder(),
-                ),
-                keyboardType: TextInputType.number,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Por favor, informe a quantidade disponível';
-                  }
-                  try {
-                    final quantity = int.parse(value);
-                    if (quantity < 0) {
-                      return 'A quantidade não pode ser negativa';
-                    }
-                  } catch (e) {
-                    return 'Por favor, informe um valor válido';
-                  }
+                  
                   return null;
                 },
               ),
@@ -737,11 +489,11 @@ class _AddEditMenuItemDialogState extends State<AddEditMenuItemDialog> {
       ),
       actions: [
         TextButton(
-          onPressed: () => Navigator.pop(context),
+          onPressed: _isLoading ? null : () => Navigator.pop(context),
           child: const Text('Cancelar'),
         ),
         ElevatedButton(
-          onPressed: _isLoading ? null : _saveMenuItem,
+          onPressed: _isLoading ? null : _saveItem,
           child: _isLoading
               ? const SizedBox(
                   width: 20,

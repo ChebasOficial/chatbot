@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
-import 'package:chatbot/models/chat_message.dart';
 import 'package:chatbot/providers/auth_provider.dart';
 import 'package:chatbot/models/menu_item.dart';
+import 'package:chatbot/models/chat_message.dart';
+import 'package:chatbot/screens/confirmation_screen.dart';
 
 class ChatbotScreen extends StatefulWidget {
   const ChatbotScreen({Key? key}) : super(key: key);
@@ -13,51 +14,15 @@ class ChatbotScreen extends StatefulWidget {
 }
 
 class _ChatbotScreenState extends State<ChatbotScreen> {
-  final List<ChatMessage> _messages = [];
-  final TextEditingController _messageController = TextEditingController();
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final TextEditingController _textController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
   
-  bool _isTyping = false;
+  List<ChatMessage> _messages = [];
   List<MenuItem> _menuItems = [];
-  bool _isLoadingMenu = true;
   Map<String, int> _cartItems = {};
   double _cartTotal = 0.0;
-  
-  // Cardápio de exemplo para fallback quando o Firestore falhar
-  final List<MenuItem> _fallbackMenuItems = [
-    MenuItem(
-      id: '1',
-      name: 'Hambúrguer Clássico',
-      description: 'Pão, hambúrguer, queijo, alface, tomate e molho especial',
-      price: 15.90,
-      imageUrl: '',
-      quantity: 10,
-    ),
-    MenuItem(
-      id: '2',
-      name: 'Batata Frita',
-      description: 'Porção de batatas fritas crocantes',
-      price: 8.50,
-      imageUrl: '',
-      quantity: 15,
-    ),
-    MenuItem(
-      id: '3',
-      name: 'Refrigerante',
-      description: 'Lata 350ml (Coca-Cola, Guaraná ou Sprite)',
-      price: 5.00,
-      imageUrl: '',
-      quantity: 20,
-    ),
-    MenuItem(
-      id: '4',
-      name: 'Salada Caesar',
-      description: 'Alface, croutons, parmesão e molho caesar',
-      price: 12.90,
-      imageUrl: '',
-      quantity: 8,
-    ),
-  ];
+  bool _isLoading = false;
   
   @override
   void initState() {
@@ -67,29 +32,19 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final authProvider = Provider.of<ChatbotAuthProvider>(context, listen: false);
       if (!authProvider.isLoggedIn) {
-        Navigator.pushReplacementNamed(context, '/');
+        Navigator.pushReplacementNamed(context, '/login');
         return;
       }
       
+      // Mensagem de boas-vindas
+      _addBotMessage('Olá! Bem-vindo ao chatbot da cantina. Como posso ajudar?');
+      
       // Carregar itens do cardápio
       _loadMenuItems();
-      
-      // Adicionar mensagem de boas-vindas
-      _addBotMessage('Olá, ${authProvider.currentUser?.ra}! Bem-vindo ao Restaurante Escola Poliedro. Como posso ajudar você hoje?');
     });
-  }
-  
-  @override
-  void dispose() {
-    _messageController.dispose();
-    super.dispose();
   }
   
   Future<void> _loadMenuItems() async {
-    setState(() {
-      _isLoadingMenu = true;
-    });
-    
     try {
       final snapshot = await _firestore.collection('menu_items').get();
       
@@ -107,42 +62,11 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
       
       setState(() {
         _menuItems = items;
-        _isLoadingMenu = false;
       });
     } catch (e) {
       print('Erro ao carregar itens do cardápio: $e');
-      
-      // Usar cardápio de fallback em caso de erro
-      setState(() {
-        _menuItems = _fallbackMenuItems;
-        _isLoadingMenu = false;
-      });
-      
-      // Mostrar mensagem de erro apenas no console, não para o usuário
-      print('Usando cardápio de fallback devido a erro: $e');
+      _addBotMessage('Desculpe, não consegui carregar o cardápio. Por favor, tente novamente mais tarde.');
     }
-  }
-  
-  void _addUserMessage(String text) {
-    if (text.trim().isEmpty) return;
-    
-    setState(() {
-      _messages.add(ChatMessage(
-        text: text,
-        isUser: true,
-        timestamp: DateTime.now(),
-      ));
-      _messageController.clear();
-      _isTyping = true;
-    });
-    
-    // Simular resposta do bot após 1 segundo
-    Future.delayed(const Duration(seconds: 1), () {
-      _processMessage(text);
-      setState(() {
-        _isTyping = false;
-      });
-    });
   }
   
   void _addBotMessage(String text) {
@@ -153,74 +77,130 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
         timestamp: DateTime.now(),
       ));
     });
+    
+    // Rolar para o final da lista
+    Future.delayed(const Duration(milliseconds: 100), () {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
+    });
   }
   
-  void _processMessage(String text) {
+  void _addUserMessage(String text) {
+    if (text.trim().isEmpty) {
+      return;
+    }
+    
+    setState(() {
+      _messages.add(ChatMessage(
+        text: text,
+        isUser: true,
+        timestamp: DateTime.now(),
+      ));
+      _textController.clear();
+    });
+    
+    // Rolar para o final da lista
+    Future.delayed(const Duration(milliseconds: 100), () {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
+    });
+    
+    // Processar mensagem do usuário
+    _processUserMessage(text);
+  }
+  
+  void _processUserMessage(String text) {
     final lowerText = text.toLowerCase();
     
-    // Verificar saudações
-    if (_containsAny(lowerText, ['olá', 'oi', 'bom dia', 'boa tarde', 'boa noite', 'ola', 'ei', 'e ai'])) {
-      _addBotMessage('Olá! Como posso ajudar você hoje? Você pode pedir o cardápio ou fazer um pedido.');
-      return;
-    }
-    
-    // Verificar pedido de cardápio
-    if (_containsAny(lowerText, ['cardápio', 'cardapio', 'menu', 'comida', 'opções', 'opcoes', 'o que tem', 'pratos'])) {
-      _showMenuItems();
-      return;
-    }
-    
-    // Verificar preços
-    if (_containsAny(lowerText, ['preço', 'preco', 'valor', 'quanto', 'custa', 'custo'])) {
-      if (_menuItems.isEmpty) {
-        _addBotMessage('Estou carregando os preços do cardápio. Por favor, aguarde um momento e tente novamente.');
-        _loadMenuItems();
-      } else {
-        _showMenuItems();
-      }
-      return;
-    }
-    
-    // Verificar intenção de pedido
-    if (_detectOrderIntent(lowerText)) {
-      _processOrderRequest(text);
-      return;
-    }
-    
-    // Verificar confirmação
-    if (_containsAny(lowerText, ['confirmar', 'confirmo', 'sim', 'correto', 'certo', 'ok']) && 
-        _messages.length > 1 && 
-        _messages[_messages.length - 2].text.contains('Está correto?')) {
+    // Verificar se é uma confirmação de pedido
+    if (lowerText.contains('confirmar')) {
       _confirmOrder();
       return;
     }
     
-    // Resposta padrão
-    _addBotMessage('Desculpe, não entendi completamente. Como posso ajudar você? Você pode pedir o cardápio ou fazer um pedido.');
-  }
-  
-  bool _containsAny(String text, List<String> keywords) {
-    return keywords.any((keyword) => text.contains(keyword));
-  }
-  
-  bool _detectOrderIntent(String text) {
-    // Palavras que indicam intenção de pedido
-    final orderKeywords = [
-      'quero', 'pedir', 'pedido', 'comprar', 'vou querer', 'me vê', 'me traz', 
-      'gostaria', 'desejo', 'preciso', 'queria', 'pode me trazer', 'vou levar'
-    ];
-    
-    // Verificar intenção de pedido
-    if (_containsAny(text, orderKeywords)) {
-      return true;
+    // Verificar se é um pedido
+    if (_isOrderRequest(lowerText)) {
+      _processOrderRequest(text);
+      return;
     }
     
-    // Verificar se mencionou algum item do cardápio
-    if (_menuItems.isNotEmpty) {
-      for (var item in _menuItems) {
-        if (text.toLowerCase().contains(item.name.toLowerCase())) {
-          return true;
-        }
+    // Verificar se quer ver o cardápio
+    if (lowerText.contains('cardápio') || lowerText.contains('cardapio') || lowerText.contains('menu')) {
+      _showMenuItems();
+      return;
+    }
+    
+    // Resposta padrão
+    _addBotMessage('Desculpe, não entendi. Você gostaria de ver o cardápio ou fazer um pedido?');
+    
+    // Mostrar opções
+    Future.delayed(const Duration(milliseconds: 500), () {
+      setState(() {
+        _messages.add(ChatMessage(
+          text: 'Cardápio',
+          isUser: false,
+          timestamp: DateTime.now(),
+          isButton: true,
+          onButtonPressed: () {
+            _showMenuItems();
+          },
+        ));
+        
+        _messages.add(ChatMessage(
+          text: 'Fazer Pedido',
+          isUser: false,
+          timestamp: DateTime.now(),
+          isButton: true,
+          onButtonPressed: () {
+            _addBotMessage('O que você gostaria de pedir hoje?');
+          },
+        ));
+      });
+    });
+  }
+  
+  void _showMenuItems() {
+    if (_menuItems.isEmpty) {
+      _addBotMessage('Estou carregando o cardápio. Por favor, aguarde um momento e tente novamente.');
+      _loadMenuItems();
+      return;
+    }
+    
+    String menuText = 'Aqui está nosso cardápio:\n\n';
+    
+    for (var item in _menuItems) {
+      menuText += '${item.name} - R\$ ${item.price.toStringAsFixed(2)}\n${item.description}\n\n';
+    }
+    
+    menuText += 'Para fazer um pedido, basta digitar o nome do item e a quantidade desejada. Por exemplo: "Quero 2 hambúrgueres".';
+    
+    _addBotMessage(menuText);
+  }
+  
+  bool _isOrderRequest(String text) {
+    // Verificar se o texto contém palavras relacionadas a pedidos
+    final orderKeywords = [
+      'quero',
+      'pedir',
+      'comprar',
+      'adicionar',
+      'adiciona',
+      'gostaria',
+    ];
+    
+    for (var keyword in orderKeywords) {
+      if (text.contains(keyword)) {
+        return true;
       }
     }
     
@@ -228,10 +208,6 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
   }
   
   void _processOrderRequest(String text) {
-    // Limpar carrinho para novo pedido
-    _cartItems.clear();
-    _cartTotal = 0.0;
-    
     // Identificar itens mencionados
     if (_menuItems.isEmpty) {
       _addBotMessage('Estou carregando o cardápio. Por favor, aguarde um momento e tente novamente.');
@@ -240,6 +216,8 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
     }
     
     bool foundItems = false;
+    Map<String, int> newItems = {};
+    double newItemsTotal = 0.0;
     
     // Procurar por itens do cardápio no texto
     for (var item in _menuItems) {
@@ -254,14 +232,32 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
           quantity = int.tryParse(match.group(1) ?? '1') ?? 1;
         }
         
-        // Adicionar ao carrinho
-        _cartItems[item.id] = quantity;
-        _cartTotal += item.price * quantity;
+        // Adicionar ao mapa temporário
+        newItems[item.id] = quantity;
+        newItemsTotal += item.price * quantity;
         foundItems = true;
       }
     }
     
     if (foundItems) {
+      // Sempre acumular itens no carrinho existente
+      for (var entry in newItems.entries) {
+        if (_cartItems.containsKey(entry.key)) {
+          // Se o item já existe no carrinho, somar a quantidade
+          _cartItems[entry.key] = (_cartItems[entry.key] ?? 0) + entry.value;
+        } else {
+          // Se o item não existe no carrinho, adicionar
+          _cartItems[entry.key] = entry.value;
+        }
+      }
+      
+      // Recalcular o total
+      _cartTotal = 0.0;
+      for (var entry in _cartItems.entries) {
+        final item = _menuItems.firstWhere((i) => i.id == entry.key);
+        _cartTotal += item.price * entry.value;
+      }
+      
       // Mostrar resumo do pedido
       String orderSummary = 'Entendi seu pedido! Aqui está o resumo:\n\n';
       
@@ -274,6 +270,21 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
       orderSummary += 'Está correto? Se sim, digite "confirmar". Se não, você pode refazer o pedido.';
       
       _addBotMessage(orderSummary);
+      
+      // Adicionar botão para adicionar mais itens após um breve atraso
+      Future.delayed(const Duration(milliseconds: 500), () {
+        setState(() {
+          _messages.add(ChatMessage(
+            text: 'adiciona mais',
+            isUser: false,
+            timestamp: DateTime.now(),
+            isButton: true,
+            onButtonPressed: () {
+              _addUserMessage('adiciona mais');
+            },
+          ));
+        });
+      });
     } else {
       // Não encontrou itens específicos
       _addBotMessage('Entendi que você quer fazer um pedido, mas não identifiquei exatamente quais itens. Aqui está nosso cardápio:');
@@ -287,76 +298,84 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
       return;
     }
     
-    final pedidoNumero = 10000 + (DateTime.now().millisecondsSinceEpoch % 90000);
+    setState(() {
+      _isLoading = true;
+    });
     
-    String confirmationMessage = 'Pedido #$pedidoNumero confirmado! Obrigado pela sua compra.\n\n';
-    confirmationMessage += 'Resumo do pedido:\n';
+    // Obter dados do usuário logado
+    final authProvider = Provider.of<ChatbotAuthProvider>(context, listen: false);
+    final userEmail = authProvider.user?.email ?? 'usuario@exemplo.com';
+    
+    // Preparar itens do pedido para salvar no Firestore
+    final List<Map<String, dynamic>> orderItems = [];
     
     for (var entry in _cartItems.entries) {
       final item = _menuItems.firstWhere((i) => i.id == entry.key);
-      confirmationMessage += '- ${entry.value}x ${item.name}: R\$ ${(item.price * entry.value).toStringAsFixed(2)}\n';
+      orderItems.add({
+        'id': item.id,
+        'name': item.name,
+        'price': item.price,
+        'quantity': entry.value,
+      });
     }
     
-    confirmationMessage += '\nTotal: R\$ ${_cartTotal.toStringAsFixed(2)}\n\n';
-    confirmationMessage += 'Seu pedido estará pronto em aproximadamente 15 minutos.\n';
-    confirmationMessage += 'Você pode retirá-lo no balcão do restaurante.\n\n';
-    confirmationMessage += 'Deseja algo mais?';
+    // Dados do pedido
+    final orderData = {
+      'userEmail': userEmail,
+      'timestamp': FieldValue.serverTimestamp(),
+      'items': orderItems,
+      'total': _cartTotal,
+    };
     
-    _addBotMessage(confirmationMessage);
-    
-    // Limpar carrinho após confirmação
-    _cartItems.clear();
-    _cartTotal = 0.0;
-  }
-  
-  void _showMenuItems() {
-    if (_isLoadingMenu) {
-      _addBotMessage('Estou carregando o cardápio. Por favor, aguarde um momento...');
-      return;
-    }
-    
-    if (_menuItems.isEmpty) {
-      _addBotMessage('Desculpe, não encontrei itens no cardápio. Por favor, tente novamente mais tarde.');
-      return;
-    }
-    
-    String menuText = 'Aqui está nosso cardápio:\n\n';
-    
-    for (var item in _menuItems) {
-      menuText += '🍽️ ${item.name}\n';
-      menuText += '   ${item.description}\n';
-      menuText += '   R\$ ${item.price.toStringAsFixed(2)}\n';
-      if (item.quantity <= 0) {
-        menuText += '   ❌ Indisponível no momento\n';
-      } else {
-        menuText += '   ✅ Disponível\n';
-      }
-      menuText += '\n';
-    }
-    
-    menuText += 'Para fazer um pedido, basta me dizer o que você deseja. Por exemplo: "Quero 1 ${_menuItems.first.name}"';
-    
-    _addBotMessage(menuText);
+    // Salvar pedido no Firestore
+    _firestore.collection('orders').add(orderData).then((docRef) {
+      final totalValue = _cartTotal; // Salvar o valor total antes de limpar o carrinho
+      
+      setState(() {
+        _isLoading = false;
+        _cartItems.clear();
+        _cartTotal = 0.0;
+      });
+      
+      // Adicionar mensagem de confirmação
+      _addBotMessage('Pedido confirmado com sucesso! Obrigado pela sua compra.');
+      
+      // Navegar para a tela de confirmação
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => ConfirmationScreen(
+            orderId: docRef.id,
+            totalValue: totalValue,
+          ),
+        ),
+      );
+    }).catchError((error) {
+      setState(() {
+        _isLoading = false;
+      });
+      
+      print('Erro ao confirmar pedido: $error');
+      _addBotMessage('Ocorreu um erro ao confirmar seu pedido. Por favor, tente novamente.');
+    });
   }
   
   @override
   Widget build(BuildContext context) {
-    final authProvider = Provider.of<ChatbotAuthProvider>(context);
-    
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Chatbot'),
+        title: const Text('Chatbot da Cantina'),
         actions: [
           IconButton(
             icon: const Icon(Icons.exit_to_app),
             onPressed: () async {
               try {
                 // Fazer logout
-                await authProvider.logout();
+                await Provider.of<ChatbotAuthProvider>(context, listen: false).logout();
                 
-                // Redirecionar para a página inicial
+                // Redirecionar para a página de login
                 if (context.mounted) {
-                  Navigator.pushReplacementNamed(context, '/');
+                  Navigator.pushReplacementNamed(context, '/login');
                 }
               } catch (e) {
                 // Mostrar erro se ocorrer
@@ -377,195 +396,122 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
         children: [
           // Lista de mensagens
           Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: _messages.length + (_isTyping ? 1 : 0),
-              itemBuilder: (context, index) {
-                if (index == _messages.length) {
-                  return _buildTypingIndicator();
-                }
-                return _buildMessageBubble(_messages[index]);
-              },
-            ),
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : ListView.builder(
+                    controller: _scrollController,
+                    padding: const EdgeInsets.all(8.0),
+                    itemCount: _messages.length,
+                    itemBuilder: (context, index) {
+                      final message = _messages[index];
+                      
+                      if (message.isButton) {
+                        return Align(
+                          alignment: Alignment.centerRight,
+                          child: Container(
+                            margin: const EdgeInsets.symmetric(vertical: 4.0),
+                            child: ElevatedButton(
+                              onPressed: message.onButtonPressed,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.deepPurple,
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(20.0),
+                                ),
+                              ),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16.0,
+                                  vertical: 8.0,
+                                ),
+                                child: Text(message.text),
+                              ),
+                            ),
+                          ),
+                        );
+                      }
+                      
+                      return Align(
+                        alignment: message.isUser
+                            ? Alignment.centerRight
+                            : Alignment.centerLeft,
+                        child: Container(
+                          margin: const EdgeInsets.symmetric(vertical: 4.0),
+                          padding: const EdgeInsets.all(12.0),
+                          decoration: BoxDecoration(
+                            color: message.isUser
+                                ? Colors.grey[300]
+                                : Colors.deepPurple[100],
+                            borderRadius: BorderRadius.circular(20.0),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                message.text,
+                                style: const TextStyle(fontSize: 16.0),
+                              ),
+                              const SizedBox(height: 4.0),
+                              Text(
+                                DateFormat('HH:mm').format(message.timestamp),
+                                style: TextStyle(
+                                  fontSize: 12.0,
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
           ),
           
-          // Opções rápidas
+          // Campo de entrada de texto
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            padding: const EdgeInsets.all(8.0),
             decoration: BoxDecoration(
               color: Colors.white,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 5,
+                  color: Colors.grey.withOpacity(0.2),
+                  spreadRadius: 1,
+                  blurRadius: 3,
                   offset: const Offset(0, -1),
-                ),
-              ],
-            ),
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: [
-                  _buildOptionButton('Cardápio', () {
-                    _showMenuItems();
-                  }),
-                  const SizedBox(width: 8),
-                  _buildOptionButton('Fazer Pedido', () {
-                    _addBotMessage('Para fazer um pedido, por favor informe:\n1. O item que deseja pedir\n2. Quantidade\n\nExemplo: "Quero 1 ${_menuItems.isNotEmpty ? _menuItems.first.name : "item do cardápio"}"');
-                  })
-                ],
-              ),
-            ),
-          ),
-          
-          // Campo de mensagem
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 5,
-                  offset: const Offset(0, -2),
                 ),
               ],
             ),
             child: Row(
               children: [
+                // Campo de texto
                 Expanded(
                   child: TextField(
-                    controller: _messageController,
+                    controller: _textController,
                     decoration: const InputDecoration(
                       hintText: 'Digite sua mensagem...',
-                      border: OutlineInputBorder(),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.all(Radius.circular(30.0)),
+                      ),
+                      contentPadding: EdgeInsets.symmetric(
+                        horizontal: 16.0,
+                        vertical: 12.0,
+                      ),
                     ),
-                    textInputAction: TextInputAction.send,
-                    onSubmitted: (value) {
-                      _addUserMessage(value);
-                    },
+                    onSubmitted: (text) => _addUserMessage(text),
                   ),
                 ),
-                const SizedBox(width: 8),
-                FloatingActionButton(
-                  onPressed: () {
-                    _addUserMessage(_messageController.text);
-                  },
-                  mini: true,
-                  child: const Icon(Icons.send),
+                
+                // Botão de enviar
+                IconButton(
+                  icon: const Icon(Icons.send),
+                  color: Colors.deepPurple,
+                  onPressed: () => _addUserMessage(_textController.text),
                 ),
               ],
             ),
           ),
         ],
       ),
-    );
-  }
-  
-  // Construir bolha de mensagem
-  Widget _buildMessageBubble(ChatMessage message) {
-    return Align(
-      alignment: message.isUser ? Alignment.centerRight : Alignment.centerLeft,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 16),
-        constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width * 0.75,
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(
-          color: message.isUser
-              ? Theme.of(context).primaryColor
-              : Colors.grey[200],
-          borderRadius: BorderRadius.circular(16).copyWith(
-            bottomRight: message.isUser ? const Radius.circular(4) : null,
-            bottomLeft: !message.isUser ? const Radius.circular(4) : null,
-          ),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Conteúdo da mensagem
-            Text(
-              message.text,
-              style: TextStyle(
-                color: message.isUser ? Colors.white : Colors.black,
-              ),
-            ),
-            
-            // Horário da mensagem
-            const SizedBox(height: 4),
-            Text(
-              '${message.timestamp.hour.toString().padLeft(2, '0')}:${message.timestamp.minute.toString().padLeft(2, '0')}',
-              style: TextStyle(
-                fontSize: 10,
-                color: message.isUser
-                    ? Colors.white.withOpacity(0.7)
-                    : Colors.black.withOpacity(0.5),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-  
-  // Construir indicador de digitação
-  Widget _buildTypingIndicator() {
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 16),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(
-          color: Colors.grey[200],
-          borderRadius: BorderRadius.circular(16).copyWith(
-            bottomLeft: const Radius.circular(4),
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _buildDot(0),
-            _buildDot(1),
-            _buildDot(2),
-          ],
-        ),
-      ),
-    );
-  }
-  
-  // Construir ponto do indicador de digitação
-  Widget _buildDot(int index) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 2),
-      width: 8,
-      height: 8,
-      decoration: BoxDecoration(
-        color: Colors.grey[600],
-        borderRadius: BorderRadius.circular(4),
-      ),
-      child: Center(
-        child: AnimatedOpacity(
-          opacity: 0.6,
-          duration: const Duration(milliseconds: 300),
-          child: Container(),
-        ),
-      ),
-    );
-  }
-  
-  // Construir botão de opção
-  Widget _buildOptionButton(String text, VoidCallback onPressed) {
-    return ElevatedButton(
-      onPressed: onPressed,
-      style: ElevatedButton.styleFrom(
-        backgroundColor: Colors.grey[200],
-        foregroundColor: Colors.black,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(18),
-        ),
-      ),
-      child: Text(text),
     );
   }
 }

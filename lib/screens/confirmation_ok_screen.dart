@@ -5,78 +5,127 @@ class ConfirmationOkScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Using teal accent color from the image
-    const Color primaryColor =
-        Colors.teal; // Or Colors.cyanAccent[700] or similar
+    // Receber os argumentos da navegação
+    final Map<String, dynamic> args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>? ?? {};
+    final int orderNumber = args['orderNumber'] as int? ?? 0;
+    final double totalAmount = args['totalAmount'] as double? ?? 0.0;
 
     return Scaffold(
-      backgroundColor: primaryColor,
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: primaryColor,
+        title: const Text('Pedido Confirmado'),
+        backgroundColor: Theme.of(context).primaryColor,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () =>
-              Navigator.of(context).pop(), // Go back to Coluna Selection
-        ),
       ),
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 40.0, vertical: 20.0),
+          padding: const EdgeInsets.all(24.0),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // Placeholder for the top element (line/indicator) - Assuming similar style
+              // Ícone de sucesso
+              Icon(
+                Icons.check_circle_outline,
+                color: Colors.green,
+                size: 100,
+              ),
+              const SizedBox(height: 32),
+              
+              // Título
+              Text(
+                'Pedido Confirmado!',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).primaryColor,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              
+              // Número do pedido
               Container(
-                height: 5,
-                width: 100,
+                padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(
-                      0.5), // INFO: Consider replacing deprecated withOpacity
-                  borderRadius: BorderRadius.circular(10),
+                  color: Colors.grey[100],
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.grey[300]!),
                 ),
-                margin: const EdgeInsets.only(bottom: 80, left: 80, right: 80),
+                child: Column(
+                  children: [
+                    Text(
+                      'Número do Pedido',
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      '#$orderNumber',
+                      style: TextStyle(
+                        fontSize: 32,
+                        fontWeight: FontWeight.bold,
+                        color: Theme.of(context).primaryColor,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Valor Total: R\$ ${totalAmount.toStringAsFixed(2)}',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              // Ok Button (Green)
+              
+              const SizedBox(height: 32),
+              
+              // Mensagem de agradecimento
+              Text(
+                'Obrigado pela sua compra!',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Seu pedido estará pronto em aproximadamente 15 minutos. Você pode retirá-lo no balcão do restaurante.',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.grey[600],
+                ),
+                textAlign: TextAlign.center,
+              ),
+              
+              const Spacer(),
+              
+              // Botão para voltar ao início
               ElevatedButton(
                 onPressed: () {
-                  // Placeholder action - maybe confirm selection
+                  Navigator.pushNamedAndRemoveUntil(
+                    context,
+                    '/inicio_screen',
+                    (route) => false,
+                  );
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green,
-                  foregroundColor: Colors.white,
+                  backgroundColor: Theme.of(context).primaryColor,
                   minimumSize: const Size(double.infinity, 50),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
                   ),
                 ),
                 child: const Text(
-                  'Ok',
+                  'Voltar ao Início',
                   style: TextStyle(fontSize: 16),
                 ),
               ),
-              const SizedBox(height: 40),
-              // Continuar Button (White)
-              ElevatedButton(
-                onPressed: () {
-                  // Navigate to Linha/Coluna Selection Screen
-                  Navigator.pushNamed(context, '/yes_no');
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  foregroundColor: Colors.black87,
-                  minimumSize: const Size(double.infinity, 50),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                ),
-                child: const Text(
-                  'Continuar',
-                  style: TextStyle(fontSize: 16),
-                ),
-              ),
-              const Spacer(), // Pushes content to center if needed
             ],
           ),
         ),
