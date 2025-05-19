@@ -10,10 +10,12 @@ class ChatbotAuthProvider extends ChangeNotifier {
 
   app_models.User? _currentUser;
   bool _isAdminLoggedIn = false;
+  String? _cachedPhone;
 
   app_models.User? get currentUser => _currentUser;
   bool get isLoggedIn => _auth.currentUser != null;
   bool get isAdminLoggedIn => _isAdminLoggedIn;
+  String? get cachedPhone => _cachedPhone;
 
   // Inicializar o provider verificando se há um usuário logado
   Future<void> initialize() async {
@@ -96,6 +98,7 @@ class ChatbotAuthProvider extends ChangeNotifier {
 
       if (userEmail != null && userPhone != null) {
         print('Dados de usuário encontrados localmente: $userEmail');
+        _cachedPhone = userPhone;
         // Não definir o usuário como logado, apenas armazenar os dados para facilitar o próximo login
       }
     } catch (e) {
@@ -109,9 +112,51 @@ class ChatbotAuthProvider extends ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('user_email', email);
       await prefs.setString('user_phone', phone);
+      _cachedPhone = phone;
       print('Dados do usuário salvos localmente: $email, $phone');
     } catch (e) {
       print('Erro ao salvar dados do usuário no armazenamento local: $e');
+    }
+  }
+
+  // Verificar se o telefone está associado ao RA no Firestore
+  Future<String?> getPhoneForRA(String ra) async {
+    try {
+      // Primeiro verificar no cache local
+      final prefs = await SharedPreferences.getInstance();
+      final cachedEmail = prefs.getString('user_email');
+      final cachedPhone = prefs.getString('user_phone');
+      
+      if (cachedEmail == ra && cachedPhone != null) {
+        print('Telefone encontrado no cache local: $cachedPhone');
+        return cachedPhone;
+      }
+      
+      // Se não encontrou no cache, tentar no Firestore
+      final querySnapshot = await _firestore
+          .collection('users')
+          .where('ra', isEqualTo: ra)
+          .limit(1)
+          .get()
+          .timeout(const Duration(seconds: 5));
+      
+      if (querySnapshot.docs.isNotEmpty) {
+        final userData = querySnapshot.docs.first.data();
+        final phone = userData['phone'] as String?;
+        
+        if (phone != null && phone.isNotEmpty) {
+          print('Telefone encontrado no Firestore: $phone');
+          // Atualizar cache local
+          await _saveUserToLocal(ra, phone);
+          return phone;
+        }
+      }
+      
+      print('Nenhum telefone encontrado para o RA: $ra');
+      return null;
+    } catch (e) {
+      print('Erro ao buscar telefone para RA: $e');
+      return null;
     }
   }
 
@@ -127,15 +172,27 @@ class ChatbotAuthProvider extends ChangeNotifier {
         throw Exception('R.A. inválido. Use o formato: 12345678@p4ed.com.br');
       }
 
-      // Validar o formato do telefone
-      final phoneRegex = RegExp(r'^\(\d{2}\) \d{5}-\d{4}$');
-      if (!phoneRegex.hasMatch(user.phone)) {
-        print('Formato de telefone inválido: ${user.phone}');
-        throw Exception('Telefone inválido. Use o formato: (11) 98765-4321');
+      // Se o telefone não foi fornecido, tentar recuperar do Firestore ou cache local
+      String phone = user.phone;
+      if (phone.isEmpty) {
+        final savedPhone = await getPhoneForRA(user.ra);
+        if (savedPhone == null || savedPhone.isEmpty) {
+          print('Telefone não fornecido e não encontrado no sistema');
+          throw Exception('Telefone necessário para o primeiro login. Por favor, informe seu telefone.');
+        }
+        phone = savedPhone;
+        print('Usando telefone recuperado: $phone');
+      } else {
+        // Validar o formato do telefone se foi fornecido
+        final phoneRegex = RegExp(r'^\(\d{2}\) \d{5}-\d{4}$');
+        if (!phoneRegex.hasMatch(phone)) {
+          print('Formato de telefone inválido: $phone');
+          throw Exception('Telefone inválido. Use o formato: (11) 98765-4321');
+        }
       }
 
       // Gerar senha a partir do telefone fornecido
-      final password = user.phone.replaceAll(RegExp(r'[^0-9]'), '');
+      final password = phone.replaceAll(RegExp(r'[^0-9]'), '');
       print('Senha gerada a partir do telefone: $password');
 
       try {
@@ -149,11 +206,11 @@ class ChatbotAuthProvider extends ChangeNotifier {
           print('Login bem-sucedido');
           
           // Salvar dados localmente
-          await _saveUserToLocal(user.ra, user.phone);
+          await _saveUserToLocal(user.ra, phone);
           
           _currentUser = app_models.User(
             ra: user.ra,
-            phone: user.phone,
+            phone: phone,
           );
           _isAdminLoggedIn = false;
           notifyListeners();
@@ -164,7 +221,7 @@ class ChatbotAuthProvider extends ChangeNotifier {
                 .collection('users')
                 .doc(userCredential.user!.uid)
                 .update({
-              'phone': user.phone,
+              'phone': phone,
               'lastLogin': FieldValue.serverTimestamp(),
             });
             print('Telefone atualizado no Firestore');
@@ -179,7 +236,7 @@ class ChatbotAuthProvider extends ChangeNotifier {
           if (authError is firebase_auth.FirebaseAuthException && 
               (authError.code == 'user-not-found' || authError.code == 'wrong-password')) {
             print('Usuário não encontrado ou senha incorreta, tentando criar conta');
-            await _createUserAccount(user.ra, user.phone);
+            await _createUserAccount(user.ra, phone);
             return;
           } else {
             print('Erro ao fazer login: $authError');

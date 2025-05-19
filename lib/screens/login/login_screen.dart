@@ -24,14 +24,51 @@ class _LoginScreenState extends State<LoginScreen> {
   );
   
   bool _isLoading = false;
-  bool _showPhoneField = true; // Mostrar campo de telefone por padrão
+  bool _showPhoneField = false; // Ocultar campo de telefone por padrão
   String? _errorMessage;
   
   @override
+  void initState() {
+    super.initState();
+    // Verificar se há telefone salvo para o RA quando o usuário digitar
+    _raController.addListener(_checkSavedPhone);
+  }
+  
+  @override
   void dispose() {
+    _raController.removeListener(_checkSavedPhone);
     _raController.dispose();
     _phoneController.dispose();
     super.dispose();
+  }
+  
+  // Verificar se há telefone salvo para o RA digitado
+  void _checkSavedPhone() async {
+    final ra = _raController.text.trim();
+    if (ra.isEmpty || !RegExp(r'^\d{8}@p4ed\.com\.br$').hasMatch(ra)) {
+      return; // RA inválido, não verificar
+    }
+    
+    final authProvider = Provider.of<ChatbotAuthProvider>(context, listen: false);
+    final savedPhone = await authProvider.getPhoneForRA(ra);
+    
+    if (savedPhone != null && savedPhone.isNotEmpty) {
+      // Telefone encontrado, ocultar campo
+      if (mounted) {
+        setState(() {
+          _showPhoneField = false;
+          _phoneController.text = savedPhone; // Preencher para uso no login
+        });
+      }
+    } else {
+      // Telefone não encontrado, mostrar campo
+      if (mounted) {
+        setState(() {
+          _showPhoneField = true;
+          _phoneController.clear();
+        });
+      }
+    }
   }
   
   Future<void> _login() async {
@@ -70,9 +107,19 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     } catch (e) {
       // Mostrar erro se ocorrer
-      setState(() {
-        _errorMessage = e.toString();
-      });
+      String errorMsg = e.toString();
+      
+      // Verificar se o erro é sobre telefone necessário
+      if (errorMsg.contains('Telefone necessário')) {
+        setState(() {
+          _showPhoneField = true;
+          _errorMessage = 'Por favor, informe seu telefone para o primeiro login.';
+        });
+      } else {
+        setState(() {
+          _errorMessage = errorMsg;
+        });
+      }
       print('Erro durante login na tela: $e');
     } finally {
       // Esconder loading
@@ -176,31 +223,35 @@ class _LoginScreenState extends State<LoginScreen> {
                             hintText: '12345678@p4ed.com.br',
                             prefixIcon: Icons.person,
                             validator: Validators.validateRA,
-                            textInputAction: TextInputAction.next,
+                            textInputAction: _showPhoneField ? TextInputAction.next : TextInputAction.done,
+                            onFieldSubmitted: (_) => _showPhoneField ? null : _login(),
                           ),
-                          const SizedBox(height: 16),
-                          // Campo de telefone - sempre visível
-                          CustomTextField(
-                            controller: _phoneController,
-                            label: 'Telefone',
-                            hintText: '(11) 98765-4321',
-                            prefixIcon: Icons.phone,
-                            keyboardType: TextInputType.phone,
-                            inputFormatters: [_phoneMask],
-                            validator: Validators.validatePhone,
-                            textInputAction: TextInputAction.done,
-                            onFieldSubmitted: (_) => _login(),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Telefone necessário apenas no primeiro login',
-                            style: TextStyle(
-                              color: Colors.grey[600],
-                              fontSize: 12,
-                              fontStyle: FontStyle.italic,
+                          
+                          // Campo de telefone - visível apenas quando necessário
+                          if (_showPhoneField) ...[
+                            const SizedBox(height: 16),
+                            CustomTextField(
+                              controller: _phoneController,
+                              label: 'Telefone',
+                              hintText: '(11) 98765-4321',
+                              prefixIcon: Icons.phone,
+                              keyboardType: TextInputType.phone,
+                              inputFormatters: [_phoneMask],
+                              validator: Validators.validatePhone,
+                              textInputAction: TextInputAction.done,
+                              onFieldSubmitted: (_) => _login(),
                             ),
-                            textAlign: TextAlign.center,
-                          ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Telefone necessário apenas no primeiro login',
+                              style: TextStyle(
+                                color: Colors.grey[600],
+                                fontSize: 12,
+                                fontStyle: FontStyle.italic,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
                           
                           // Mensagem de erro
                           if (_errorMessage != null) ...[
