@@ -23,6 +23,7 @@ class CustomButton extends StatelessWidget {
       style: backgroundColor != null
           ? ElevatedButton.styleFrom(
               backgroundColor: backgroundColor,
+              foregroundColor: textColor,
             )
           : null,
       child: isLoading
