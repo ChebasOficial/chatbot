@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:chatbot/models/chat_message.dart';
-import 'package:chatbot/models/menu_item.dart';
-import 'package:chatbot/models/order.dart';
-import 'package:chatbot/providers/auth_provider.dart';
-import 'package:chatbot/providers/order_provider.dart';
-import 'package:chatbot/widgets/custom_button.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
+import 'package:chatbot/providers/auth_provider.dart';
+import 'package:chatbot/models/menu_item.dart';
+import 'package:chatbot/models/chat_message.dart';
+import 'package:chatbot/screens/confirmation_screen.dart';
+import 'package:chatbot/providers/counter_provider.dart';
+import 'package:intl/intl.dart';
 
 class ChatbotScreen extends StatefulWidget {
   const ChatbotScreen({Key? key}) : super(key: key);
@@ -15,96 +16,61 @@ class ChatbotScreen extends StatefulWidget {
 }
 
 class _ChatbotScreenState extends State<ChatbotScreen> {
-  final TextEditingController _messageController = TextEditingController();
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final TextEditingController _textController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
-  final List<ChatMessage> _messages = [];
-  bool _isTyping = false;
   
-  // Dados do cardápio
-  final List<MenuItem> _menuItems = [
-    MenuItem(
-      id: '1',
-      name: 'Prato Executivo',
-      description: 'Arroz, feijão, salada e proteína do dia',
-      price: 15.90,
-    ),
-    MenuItem(
-      id: '2',
-      name: 'Salada Caesar',
-      description: 'Alface, croutons, frango e molho caesar',
-      price: 12.50,
-    ),
-    MenuItem(
-      id: '3',
-      name: 'Sanduíche Natural',
-      description: 'Pão integral, frango, alface, tomate e cenoura',
-      price: 8.90,
-    ),
-    MenuItem(
-      id: '4',
-      name: 'Suco Natural',
-      description: 'Laranja, maracujá ou abacaxi',
-      price: 5.00,
-    ),
-    MenuItem(
-      id: '5',
-      name: 'Sobremesa do dia',
-      description: 'Pudim ou mousse de chocolate',
-      price: 6.50,
-    ),
-  ];
+  List<ChatMessage> _messages = [];
+  List<MenuItem> _menuItems = [];
+  Map<String, int> _cartItems = {};
+  double _cartTotal = 0.0;
+  bool _isLoading = false;
   
-  // Promoções
-  final List<MenuItem> _promotions = [
-    MenuItem(
-      id: '6',
-      name: 'Combo Estudante',
-      description: 'Prato executivo + suco + sobremesa',
-      price: 22.90,
-    ),
-    MenuItem(
-      id: '7',
-      name: 'Combo Funcionário',
-      description: 'Sanduíche + suco',
-      price: 12.90,
-    ),
-  ];
-  
-  // Horário de funcionamento
-  final Map<String, String> _schedule = {
-    'diasUteis': 'Segunda a Sexta: 07:00 às 19:00',
-    'sabados': 'Sábados: 08:00 às 14:00',
-    'domingos': 'Fechado',
-  };
-  
-  // Pedido atual
-  Order? _currentOrder;
-
   @override
   void initState() {
     super.initState();
     
     // Verificar se o usuário está logado
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final authProvider = Provider.of<ChatbotAuthProvider>(context, listen: false);
       if (!authProvider.isLoggedIn) {
-        Navigator.pushReplacementNamed(context, '/');
+        Navigator.pushReplacementNamed(context, '/login');
         return;
       }
       
-      // Adicionar mensagem de boas-vindas
-      _addBotMessage('Olá, ${authProvider.currentUser?.ra}! Bem-vindo ao Restaurante da Escola Palidro.\nComo posso ajudar você hoje?');
+      // Mensagem de boas-vindas
+      _addBotMessage('Olá! Bem-vindo ao chatbot da cantina. Como posso ajudar?');
+      
+      // Carregar itens do cardápio
+      _loadMenuItems();
     });
   }
-
-  @override
-  void dispose() {
-    _messageController.dispose();
-    _scrollController.dispose();
-    super.dispose();
+  
+  Future<void> _loadMenuItems() async {
+    try {
+      final snapshot = await _firestore.collection('menu_items').get();
+      
+      final items = snapshot.docs.map((doc) {
+        final data = doc.data();
+        return MenuItem(
+          id: doc.id,
+          name: data['name'] ?? '',
+          description: data['description'] ?? '',
+          price: (data['price'] ?? 0).toDouble(),
+          imageUrl: data['imageUrl'] ?? '',
+          quantity: data['quantity'] ?? 0,
+        );
+      }).toList();
+      
+      setState(() {
+        _menuItems = items;
+      });
+    } catch (e) {
+      print('Erro ao carregar itens do cardápio: $e');
+      _addBotMessage('Desculpe, não consegui carregar o cardápio. Por favor, tente novamente mais tarde.');
+    }
   }
-
-  // Adicionar mensagem do bot
+  
   void _addBotMessage(String text) {
     setState(() {
       _messages.add(ChatMessage(
@@ -113,234 +79,9 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
         timestamp: DateTime.now(),
       ));
     });
-    _scrollToBottom();
-  }
-
-  // Adicionar mensagem do usuário
-  void _addUserMessage(String text) {
-    if (text.trim().isEmpty) return;
     
-    setState(() {
-      _messages.add(ChatMessage(
-        text: text,
-        isUser: true,
-        timestamp: DateTime.now(),
-      ));
-      _messageController.clear();
-    });
-    _scrollToBottom();
-    
-    // Simular digitação do bot
-    setState(() {
-      _isTyping = true;
-    });
-    
-    // Processar a mensagem após um delay
-    Future.delayed(const Duration(seconds: 1), () {
-      setState(() {
-        _isTyping = false;
-      });
-      _processMessage(text);
-    });
-  }
-
-  // Processar a mensagem do usuário
-  void _processMessage(String message) {
-    final lowerMessage = message.toLowerCase();
-    
-    // Verificar se é uma confirmação de pedido
-    if (lowerMessage.contains('confirmar') && _currentOrder != null) {
-      _confirmOrder();
-      return;
-    }
-    
-    // Verificar o tipo de mensagem
-    if (lowerMessage.contains('cardápio') || lowerMessage.contains('menu')) {
-      _showMenu();
-    } else if (lowerMessage.contains('promoção') || lowerMessage.contains('oferta')) {
-      _showPromotions();
-    } else if (lowerMessage.contains('horário') || lowerMessage.contains('funcionamento')) {
-      _showSchedule();
-    } else if (lowerMessage.contains('pedido') || lowerMessage.contains('pedir') || lowerMessage.contains('quero')) {
-      _processOrder(message);
-    } else {
-      _addBotMessage('Desculpe, não entendi. Você pode escolher uma das opções abaixo ou perguntar sobre nosso cardápio, promoções ou horário de funcionamento.');
-    }
-  }
-
-  // Mostrar cardápio
-  void _showMenu() {
-    String menuText = '<strong>📋 Cardápio do Restaurante:</strong>\n\n';
-    
-    for (var item in _menuItems) {
-      menuText += '<strong>${item.name}</strong> - R\$ ${item.price.toStringAsFixed(2)}\n';
-      menuText += '${item.description}\n\n';
-    }
-    
-    _addBotMessage(menuText);
-  }
-
-  // Mostrar promoções
-  void _showPromotions() {
-    String promoText = '<strong>🎉 Promoções Especiais:</strong>\n\n';
-    
-    for (var promo in _promotions) {
-      promoText += '<strong>${promo.name}</strong> - R\$ ${promo.price.toStringAsFixed(2)}\n';
-      promoText += '${promo.description}\n\n';
-    }
-    
-    _addBotMessage(promoText);
-  }
-
-  // Mostrar horário de funcionamento
-  void _showSchedule() {
-    String scheduleText = '<strong>⏰ Horário de Funcionamento:</strong>\n\n';
-    scheduleText += '${_schedule['diasUteis']}\n';
-    scheduleText += '${_schedule['sabados']}\n';
-    scheduleText += '${_schedule['domingos']}';
-    
-    _addBotMessage(scheduleText);
-  }
-
-  // Processar pedido
-  void _processOrder(String message) {
-    // Inicializar novo pedido
-    _currentOrder = Order(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      ra: Provider.of<AuthProvider>(context, listen: false).currentUser!.ra,
-      timestamp: DateTime.now(),
-      items: [],
-      total: 0,
-      status: 'pending',
-    );
-    
-    // Analisar o pedido (simplificado para demonstração)
-    if (message.toLowerCase().contains('prato executivo')) {
-      final menuItem = _menuItems.firstWhere((item) => item.name == 'Prato Executivo');
-      _currentOrder!.items.add(OrderItem(
-        menuItem: menuItem,
-        quantity: 1,
-      ));
-      _currentOrder!.total += menuItem.price;
-    }
-    
-    if (message.toLowerCase().contains('salada caesar')) {
-      final menuItem = _menuItems.firstWhere((item) => item.name == 'Salada Caesar');
-      _currentOrder!.items.add(OrderItem(
-        menuItem: menuItem,
-        quantity: 1,
-      ));
-      _currentOrder!.total += menuItem.price;
-    }
-    
-    if (message.toLowerCase().contains('sanduíche') || message.toLowerCase().contains('sanduiche')) {
-      final menuItem = _menuItems.firstWhere((item) => item.name == 'Sanduíche Natural');
-      _currentOrder!.items.add(OrderItem(
-        menuItem: menuItem,
-        quantity: 1,
-      ));
-      _currentOrder!.total += menuItem.price;
-    }
-    
-    if (message.toLowerCase().contains('suco')) {
-      final menuItem = _menuItems.firstWhere((item) => item.name == 'Suco Natural');
-      _currentOrder!.items.add(OrderItem(
-        menuItem: menuItem,
-        quantity: 1,
-      ));
-      _currentOrder!.total += menuItem.price;
-    }
-    
-    if (message.toLowerCase().contains('sobremesa')) {
-      final menuItem = _menuItems.firstWhere((item) => item.name == 'Sobremesa do dia');
-      _currentOrder!.items.add(OrderItem(
-        menuItem: menuItem,
-        quantity: 1,
-      ));
-      _currentOrder!.total += menuItem.price;
-    }
-    
-    if (message.toLowerCase().contains('combo estudante')) {
-      final menuItem = _promotions.firstWhere((item) => item.name == 'Combo Estudante');
-      _currentOrder!.items.add(OrderItem(
-        menuItem: menuItem,
-        quantity: 1,
-      ));
-      _currentOrder!.total += menuItem.price;
-    }
-    
-    if (message.toLowerCase().contains('combo funcionário') || message.toLowerCase().contains('combo funcionario')) {
-      final menuItem = _promotions.firstWhere((item) => item.name == 'Combo Funcionário');
-      _currentOrder!.items.add(OrderItem(
-        menuItem: menuItem,
-        quantity: 1,
-      ));
-      _currentOrder!.total += menuItem.price;
-    }
-    
-    // Verificar se o pedido está vazio
-    if (_currentOrder!.items.isEmpty) {
-      _addBotMessage('Desculpe, não consegui identificar os itens do seu pedido. Por favor, tente novamente especificando os itens do cardápio.');
-      _currentOrder = null;
-      return;
-    }
-    
-    // Formatar a mensagem de confirmação
-    String confirmationMessage = 'Obrigado pelo seu pedido! Vou registrá-lo para você.\n\nPor favor, confirme os dados do seu pedido:\n\n';
-    
-    // Adicionar R.A.
-    confirmationMessage += '<strong>R.A.:</strong> ${_currentOrder!.ra}\n\n';
-    
-    // Adicionar itens
-    confirmationMessage += '<strong>Itens solicitados:</strong>\n';
-    for (var item in _currentOrder!.items) {
-      confirmationMessage += '- ${item.quantity}x ${item.menuItem.name}: R\$ ${(item.menuItem.price * item.quantity).toStringAsFixed(2)}\n';
-    }
-    
-    // Adicionar total
-    confirmationMessage += '\n<strong>Total: R\$ ${_currentOrder!.total.toStringAsFixed(2)}</strong>\n\n';
-    
-    confirmationMessage += 'Está correto? Se sim, digite "confirmar". Se não, você pode refazer o pedido.';
-    
-    _addBotMessage(confirmationMessage);
-  }
-
-  // Confirmar pedido
-  void _confirmOrder() {
-    if (_currentOrder == null) return;
-    
-    // Gerar ID único para o pedido
-    final orderId = DateTime.now().millisecondsSinceEpoch.toString();
-    _currentOrder!.id = orderId;
-    
-    // Salvar o pedido
-    final orderProvider = Provider.of<OrderProvider>(context, listen: false);
-    orderProvider.addOrder(_currentOrder!);
-    
-    // Formatar mensagem de confirmação
-    String confirmationMessage = '<strong>Pedido confirmado!</strong> Seu número de pedido é #${orderId.substring(orderId.length - 5)}.\n\n';
-    confirmationMessage += '<strong>Resumo do pedido:</strong>\n';
-    
-    // Adicionar itens
-    for (var item in _currentOrder!.items) {
-      confirmationMessage += '- ${item.quantity}x ${item.menuItem.name}: R\$ ${(item.menuItem.price * item.quantity).toStringAsFixed(2)}\n';
-    }
-    
-    // Adicionar total e instruções
-    confirmationMessage += '\n<strong>Total: R\$ ${_currentOrder!.total.toStringAsFixed(2)}</strong>\n\n';
-    confirmationMessage += 'Seu pedido estará pronto em aproximadamente 15 minutos.\n';
-    confirmationMessage += 'Você pode retirá-lo no balcão do restaurante.\n\n';
-    confirmationMessage += 'Deseja algo mais?';
-    
-    _addBotMessage(confirmationMessage);
-    
-    // Resetar o pedido atual
-    _currentOrder = null;
-  }
-
-  // Rolar para o final da lista de mensagens
-  void _scrollToBottom() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    // Rolar para o final da lista
+    Future.delayed(const Duration(milliseconds: 100), () {
       if (_scrollController.hasClients) {
         _scrollController.animateTo(
           _scrollController.position.maxScrollExtent,
@@ -350,30 +91,311 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
       }
     });
   }
-
+  
+  void _addUserMessage(String text) {
+    if (text.trim().isEmpty) {
+      return;
+    }
+    
+    setState(() {
+      _messages.add(ChatMessage(
+        text: text,
+        isUser: true,
+        timestamp: DateTime.now(),
+      ));
+      _textController.clear();
+    });
+    
+    // Rolar para o final da lista
+    Future.delayed(const Duration(milliseconds: 100), () {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
+    });
+    
+    // Processar mensagem do usuário
+    _processUserMessage(text);
+  }
+  
+  void _processUserMessage(String text) {
+    final lowerText = text.toLowerCase();
+    
+    // Verificar se é uma confirmação de pedido
+    if (lowerText.contains('confirmar')) {
+      _confirmOrder();
+      return;
+    }
+    
+    // Verificar se é um pedido
+    if (_isOrderRequest(lowerText)) {
+      _processOrderRequest(text);
+      return;
+    }
+    
+    // Verificar se quer ver o cardápio
+    if (lowerText.contains('cardápio') || lowerText.contains('cardapio') || lowerText.contains('menu')) {
+      _showMenuItems();
+      return;
+    }
+    
+    // Resposta padrão
+    _addBotMessage('Desculpe, não entendi. Você gostaria de ver o cardápio ou fazer um pedido?');
+    
+    // Mostrar opções
+    Future.delayed(const Duration(milliseconds: 500), () {
+      setState(() {
+        _messages.add(ChatMessage(
+          text: 'Cardápio',
+          isUser: false,
+          timestamp: DateTime.now(),
+          isButton: true,
+          onButtonPressed: () {
+            _showMenuItems();
+          },
+        ));
+        
+        _messages.add(ChatMessage(
+          text: 'Fazer Pedido',
+          isUser: false,
+          timestamp: DateTime.now(),
+          isButton: true,
+          onButtonPressed: () {
+            _addBotMessage('O que você gostaria de pedir hoje?');
+          },
+        ));
+      });
+    });
+  }
+  
+  void _showMenuItems() {
+    if (_menuItems.isEmpty) {
+      _addBotMessage('Estou carregando o cardápio. Por favor, aguarde um momento e tente novamente.');
+      _loadMenuItems();
+      return;
+    }
+    
+    String menuText = 'Aqui está nosso cardápio:\n\n';
+    
+    for (var item in _menuItems) {
+      menuText += '${item.name} - R\$ ${item.price.toStringAsFixed(2)}\n${item.description}\n\n';
+    }
+    
+    menuText += 'Para fazer um pedido, basta digitar o nome do item e a quantidade desejada. Por exemplo: "Quero 2 hambúrgueres".';
+    
+    _addBotMessage(menuText);
+  }
+  
+  bool _isOrderRequest(String text) {
+    // Verificar se o texto contém palavras relacionadas a pedidos
+    final orderKeywords = [
+      'quero',
+      'pedir',
+      'comprar',
+      'adicionar',
+      'adiciona',
+      'gostaria',
+    ];
+    
+    for (var keyword in orderKeywords) {
+      if (text.contains(keyword)) {
+        return true;
+      }
+    }
+    
+    return false;
+  }
+  
+  void _processOrderRequest(String text) {
+    // Identificar itens mencionados
+    if (_menuItems.isEmpty) {
+      _addBotMessage('Estou carregando o cardápio. Por favor, aguarde um momento e tente novamente.');
+      _loadMenuItems();
+      return;
+    }
+    
+    bool foundItems = false;
+    Map<String, int> newItems = {};
+    double newItemsTotal = 0.0;
+    
+    // Procurar por itens do cardápio no texto
+    for (var item in _menuItems) {
+      if (text.toLowerCase().contains(item.name.toLowerCase())) {
+        // Tentar identificar quantidade
+        int quantity = 1; // Padrão
+        
+        // Procurar por números antes do nome do item
+        final regex = RegExp(r'(\d+)\s*' + item.name, caseSensitive: false);
+        final match = regex.firstMatch(text);
+        if (match != null && match.groupCount >= 1) {
+          quantity = int.tryParse(match.group(1) ?? '1') ?? 1;
+        }
+        
+        // Adicionar ao mapa temporário
+        newItems[item.id] = quantity;
+        newItemsTotal += item.price * quantity;
+        foundItems = true;
+      }
+    }
+    
+    if (foundItems) {
+      // Sempre acumular itens no carrinho existente
+      for (var entry in newItems.entries) {
+        if (_cartItems.containsKey(entry.key)) {
+          // Se o item já existe no carrinho, somar a quantidade
+          _cartItems[entry.key] = (_cartItems[entry.key] ?? 0) + entry.value;
+        } else {
+          // Se o item não existe no carrinho, adicionar
+          _cartItems[entry.key] = entry.value;
+        }
+      }
+      
+      // Recalcular o total
+      _cartTotal = 0.0;
+      for (var entry in _cartItems.entries) {
+        final item = _menuItems.firstWhere((i) => i.id == entry.key);
+        _cartTotal += item.price * entry.value;
+      }
+      
+      // Mostrar resumo do pedido
+      String orderSummary = 'Entendi seu pedido! Aqui está o resumo:\n\n';
+      
+      for (var entry in _cartItems.entries) {
+        final item = _menuItems.firstWhere((i) => i.id == entry.key);
+        orderSummary += '- ${entry.value}x ${item.name}: R\$ ${(item.price * entry.value).toStringAsFixed(2)}\n';
+      }
+      
+      orderSummary += '\nTotal: R\$ ${_cartTotal.toStringAsFixed(2)}\n\n';
+      orderSummary += 'Está correto? Se sim, digite "confirmar". Se não, você pode refazer o pedido.';
+      
+      _addBotMessage(orderSummary);
+      
+      // Adicionar botão para adicionar mais itens após um breve atraso
+      Future.delayed(const Duration(milliseconds: 500), () {
+        setState(() {
+          _messages.add(ChatMessage(
+            text: 'adiciona mais',
+            isUser: false,
+            timestamp: DateTime.now(),
+            isButton: true,
+            onButtonPressed: () {
+              _addUserMessage('adiciona mais');
+            },
+          ));
+        });
+      });
+    } else {
+      // Não encontrou itens específicos
+      _addBotMessage('Entendi que você quer fazer um pedido, mas não identifiquei exatamente quais itens. Aqui está nosso cardápio:');
+      _showMenuItems();
+    }
+  }
+  
+  void _confirmOrder() {
+    if (_cartItems.isEmpty) {
+      _addBotMessage('Não há itens no seu pedido atual. Por favor, faça um novo pedido.');
+      return;
+    }
+    
+    setState(() {
+      _isLoading = true;
+    });
+    
+    // Obter dados do usuário logado
+    final authProvider = Provider.of<ChatbotAuthProvider>(context, listen: false);
+    final userEmail = authProvider.currentUser?.ra ?? 'usuario@exemplo.com';
+    
+    // Preparar itens do pedido para salvar no Firestore
+    final List<Map<String, dynamic>> orderItems = [];
+    
+    for (var entry in _cartItems.entries) {
+      final item = _menuItems.firstWhere((i) => i.id == entry.key);
+      orderItems.add({
+        'id': item.id,
+        'name': item.name,
+        'price': item.price,
+        'quantity': entry.value,
+      });
+    }
+    
+    // Criar instância do CounterProvider para obter o número sequencial do pedido
+    final counterProvider = CounterProvider();
+    
+    // Obter o próximo número de pedido sequencial
+    counterProvider.getNextOrderNumber().then((orderNumber) {
+      // Dados do pedido com o número sequencial
+      final orderData = {
+        'userEmail': userEmail,
+        'timestamp': FieldValue.serverTimestamp(),
+        'items': orderItems,
+        'total': _cartTotal,
+        'orderNumber': orderNumber, // Número sequencial do pedido (1-999)
+      };
+      
+      // Salvar pedido no Firestore
+      _firestore.collection('orders').add(orderData).then((docRef) {
+        final totalValue = _cartTotal; // Salvar o valor total antes de limpar o carrinho
+        
+        setState(() {
+          _isLoading = false;
+          _cartItems.clear();
+          _cartTotal = 0.0;
+        });
+        
+        // Adicionar mensagem de confirmação
+        _addBotMessage('Pedido confirmado com sucesso! Obrigado pela sua compra.');
+        
+        // Navegar para a tela de confirmação com o número sequencial do pedido
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ConfirmationScreen(
+              orderId: orderNumber.toString().padLeft(3, '0'), // Formatar para 3 dígitos com zeros à esquerda
+              totalValue: totalValue,
+            ),
+          ),
+        );
+    }).catchError((error) {
+      setState(() {
+        _isLoading = false;
+      });
+      
+      print('Erro ao confirmar pedido: $error');
+      _addBotMessage('Ocorreu um erro ao confirmar seu pedido. Por favor, tente novamente.');
+    });
+  }
+  
   @override
   Widget build(BuildContext context) {
-    final authProvider = Provider.of<AuthProvider>(context);
-    
     return Scaffold(
       appBar: AppBar(
-        title: Column(
-          children: [
-            const Text('Restaurante Escola Palidro'),
-            if (authProvider.currentUser != null)
-              Text(
-                authProvider.currentUser!.ra,
-                style: const TextStyle(fontSize: 12),
-              ),
-          ],
-        ),
+        title: const Text('Chatbot da Cantina'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.logout),
+            icon: const Icon(Icons.exit_to_app),
             onPressed: () async {
-              await authProvider.logout();
-              if (!mounted) return;
-              Navigator.pushReplacementNamed(context, '/');
+              try {
+                // Fazer logout
+                await Provider.of<ChatbotAuthProvider>(context, listen: false).logout();
+                
+                // Redirecionar para a página de login
+                if (context.mounted) {
+                  Navigator.pushReplacementNamed(context, '/login');
+                }
+              } catch (e) {
+                // Mostrar erro se ocorrer
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Erro ao fazer logout: $e'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
             },
           ),
         ],
@@ -382,192 +404,122 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
         children: [
           // Lista de mensagens
           Expanded(
-            child: ListView.builder(
-              controller: _scrollController,
-              padding: const EdgeInsets.all(16),
-              itemCount: _messages.length + (_isTyping ? 1 : 0),
-              itemBuilder: (context, index) {
-                // Indicador de digitação
-                if (_isTyping && index == _messages.length) {
-                  return _buildTypingIndicator();
-                }
-                
-                // Mensagem normal
-                final message = _messages[index];
-                return _buildMessageBubble(message);
-              },
-            ),
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : ListView.builder(
+                    controller: _scrollController,
+                    padding: const EdgeInsets.all(8.0),
+                    itemCount: _messages.length,
+                    itemBuilder: (context, index) {
+                      final message = _messages[index];
+                      
+                      if (message.isButton == true) {
+                        return Align(
+                          alignment: Alignment.centerRight,
+                          child: Container(
+                            margin: const EdgeInsets.symmetric(vertical: 4.0),
+                            child: ElevatedButton(
+                              onPressed: message.onButtonPressed,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.deepPurple,
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(20.0),
+                                ),
+                              ),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16.0,
+                                  vertical: 8.0,
+                                ),
+                                child: Text(message.text),
+                              ),
+                            ),
+                          ),
+                        );
+                      }
+                      
+                      return Align(
+                        alignment: message.isUser
+                            ? Alignment.centerRight
+                            : Alignment.centerLeft,
+                        child: Container(
+                          margin: const EdgeInsets.symmetric(vertical: 4.0),
+                          padding: const EdgeInsets.all(12.0),
+                          decoration: BoxDecoration(
+                            color: message.isUser
+                                ? Colors.grey[300]
+                                : Colors.deepPurple[100],
+                            borderRadius: BorderRadius.circular(20.0),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                message.text,
+                                style: const TextStyle(fontSize: 16.0),
+                              ),
+                              const SizedBox(height: 4.0),
+                              Text(
+                                DateFormat('HH:mm').format(message.timestamp),
+                                style: TextStyle(
+                                  fontSize: 12.0,
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
           ),
           
-          // Opções rápidas
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: [
-                  _buildOptionButton('Ver Cardápio', () => _showMenu()),
-                  const SizedBox(width: 8),
-                  _buildOptionButton('Promoções', () => _showPromotions()),
-                  const SizedBox(width: 8),
-                  _buildOptionButton('Horário de Funcionamento', () => _showSchedule()),
-                  const SizedBox(width: 8),
-                  _buildOptionButton('Fazer Pedido', () {
-                    _addBotMessage('Para fazer um pedido, por favor informe:\n1. O item que deseja pedir\n2. Quantidade\n3. Observações (se houver)\n\nExemplo: "Quero 1 Prato Executivo e 1 Suco de Laranja"');
-                  }),
-                ],
-              ),
-            ),
-          ),
-          
-          // Campo de mensagem
+          // Campo de entrada de texto
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(8.0),
             decoration: BoxDecoration(
               color: Colors.white,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 5,
-                  offset: const Offset(0, -2),
+                  color: Colors.grey.withOpacity(0.2),
+                  spreadRadius: 1,
+                  blurRadius: 3,
+                  offset: const Offset(0, -1),
                 ),
               ],
             ),
             child: Row(
               children: [
+                // Campo de texto
                 Expanded(
                   child: TextField(
-                    controller: _messageController,
+                    controller: _textController,
                     decoration: const InputDecoration(
                       hintText: 'Digite sua mensagem...',
-                      border: OutlineInputBorder(),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.all(Radius.circular(30.0)),
+                      ),
+                      contentPadding: EdgeInsets.symmetric(
+                        horizontal: 16.0,
+                        vertical: 12.0,
+                      ),
                     ),
-                    textInputAction: TextInputAction.send,
-                    onSubmitted: (value) {
-                      _addUserMessage(value);
-                    },
+                    onSubmitted: (text) => _addUserMessage(text),
                   ),
                 ),
-                const SizedBox(width: 8),
-                FloatingActionButton(
-                  onPressed: () {
-                    _addUserMessage(_messageController.text);
-                  },
-                  mini: true,
-                  child: const Icon(Icons.send),
+                
+                // Botão de enviar
+                IconButton(
+                  icon: const Icon(Icons.send),
+                  color: Colors.deepPurple,
+                  onPressed: () => _addUserMessage(_textController.text),
                 ),
               ],
             ),
           ),
         ],
       ),
-    );
-  }
-
-  // Construir bolha de mensagem
-  Widget _buildMessageBubble(ChatMessage message) {
-    return Align(
-      alignment: message.isUser ? Alignment.centerRight : Alignment.centerLeft,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 16),
-        constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width * 0.75,
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(
-          color: message.isUser
-              ? Theme.of(context).primaryColor
-              : Colors.grey[200],
-          borderRadius: BorderRadius.circular(16).copyWith(
-            bottomRight: message.isUser ? const Radius.circular(4) : null,
-            bottomLeft: !message.isUser ? const Radius.circular(4) : null,
-          ),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Conteúdo da mensagem
-            Text(
-              message.text,
-              style: TextStyle(
-                color: message.isUser ? Colors.white : Colors.black,
-              ),
-            ),
-            
-            // Horário da mensagem
-            const SizedBox(height: 4),
-            Text(
-              '${message.timestamp.hour.toString().padLeft(2, '0')}:${message.timestamp.minute.toString().padLeft(2, '0')}',
-              style: TextStyle(
-                fontSize: 10,
-                color: message.isUser
-                    ? Colors.white.withOpacity(0.7)
-                    : Colors.black.withOpacity(0.5),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // Construir indicador de digitação
-  Widget _buildTypingIndicator() {
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 16),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(
-          color: Colors.grey[200],
-          borderRadius: BorderRadius.circular(16).copyWith(
-            bottomLeft: const Radius.circular(4),
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _buildDot(0),
-            _buildDot(1),
-            _buildDot(2),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // Construir ponto do indicador de digitação
-  Widget _buildDot(int index) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 2),
-      width: 8,
-      height: 8,
-      decoration: BoxDecoration(
-        color: Colors.grey[600],
-        borderRadius: BorderRadius.circular(4),
-      ),
-      child: Center(
-        child: AnimatedOpacity(
-          opacity: 0.6,
-          duration: const Duration(milliseconds: 300),
-          child: Container(),
-        ),
-      ),
-    );
-  }
-
-  // Construir botão de opção
-  Widget _buildOptionButton(String text, VoidCallback onPressed) {
-    return ElevatedButton(
-      onPressed: onPressed,
-      style: ElevatedButton.styleFrom(
-        backgroundColor: Colors.grey[200],
-        foregroundColor: Colors.black,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(18),
-        ),
-      ),
-      child: Text(text),
     );
   }
 }

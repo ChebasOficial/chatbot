@@ -409,7 +409,7 @@ class _AddEditMenuItemDialogState extends State<AddEditMenuItemDialog> {
               TextFormField(
                 controller: _priceController,
                 decoration: const InputDecoration(
-                  labelText: 'Preço (R$)',
+                  labelText: 'Preço (R\$)',
                   border: OutlineInputBorder(),
                 ),
                 keyboardType: TextInputType.numberWithOptions(decimal: true),
