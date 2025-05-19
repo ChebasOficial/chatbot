@@ -85,5 +85,4 @@ class DefaultFirebaseOptions {
     storageBucket: 'chatbot-de18f.firebasestorage.app',
     measurementId: 'G-DQLX57YJNB',
   );
-
 }

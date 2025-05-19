@@ -23,16 +23,16 @@ import 'package:chatbot/providers/auth_provider.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   // Inicializar Firebase
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-  
+
   // Inicializar o ChatbotAuthProvider
   final chatbotAuthProvider = ChatbotAuthProvider();
   await chatbotAuthProvider.initialize();
-  
+
   runApp(
     MultiProvider(
       providers: [
@@ -94,7 +94,7 @@ class AuthGuard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final authProvider = Provider.of<ChatbotAuthProvider>(context);
-    
+
     // Verificar se o usuário está logado
     if (!authProvider.isLoggedIn) {
       // Redirecionar para a tela de login
@@ -107,7 +107,7 @@ class AuthGuard extends StatelessWidget {
         ),
       );
     }
-    
+
     // Verificar se é necessário ser admin
     if (requireAdmin && !authProvider.isAdminLoggedIn) {
       // Redirecionar para a tela de login admin
@@ -120,7 +120,7 @@ class AuthGuard extends StatelessWidget {
         ),
       );
     }
-    
+
     // Se estiver autenticado, mostrar a tela
     return child;
   }

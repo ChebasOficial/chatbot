@@ -12,6 +12,7 @@ class CustomTextField extends StatelessWidget {
   final TextInputAction textInputAction;
   final String? Function(String?)? validator;
   final Function(String)? onFieldSubmitted;
+  final Function(String)? onChanged;
   final List<TextInputFormatter>? inputFormatters;
 
   const CustomTextField({
@@ -26,6 +27,7 @@ class CustomTextField extends StatelessWidget {
     this.textInputAction = TextInputAction.next,
     this.validator,
     this.onFieldSubmitted,
+    this.onChanged,
     this.inputFormatters,
   }) : super(key: key);
 
@@ -44,6 +46,7 @@ class CustomTextField extends StatelessWidget {
       textInputAction: textInputAction,
       validator: validator,
       onFieldSubmitted: onFieldSubmitted,
+      onChanged: onChanged,
       inputFormatters: inputFormatters,
     );
   }
