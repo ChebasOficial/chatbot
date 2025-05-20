@@ -19,38 +19,50 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
   bool _obscurePassword = true;
   bool _isLoading = false;
   String? _errorMessage;
-  
+
   @override
   void dispose() {
     _usernameController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
-  
+
   Future<void> _adminLogin() async {
     // Validar formulário
     if (!_formKey.currentState!.validate()) {
       return;
     }
-    
+
     // Mostrar loading
     setState(() {
       _isLoading = true;
       _errorMessage = null;
     });
-    
+
     try {
       // Obter dados do formulário
       final username = _usernameController.text.trim();
       final password = _passwordController.text.trim();
-      
+
       // Fazer login administrativo no provider
-      final authProvider = Provider.of<ChatbotAuthProvider>(context, listen: false);
-      await authProvider.adminLogin(username, password);
-      
-      // Navegar para a tela de cozinha se o login for bem-sucedido
-      if (context.mounted) {
-        Navigator.pushReplacementNamed(context, '/kitchen');
+      final authProvider =
+          Provider.of<ChatbotAuthProvider>(context, listen: false);
+
+      // Verificar se é login da cozinha ou admin
+      if (username == 'cozinha@p4ed.com.br') {
+        await authProvider.loginKitchen(username, password);
+
+        // Navegar para a tela de cozinha se o login for bem-sucedido
+        if (context.mounted) {
+          Navigator.pushReplacementNamed(context, '/kitchen');
+        }
+      } else {
+        await authProvider.loginAdmin(username, password);
+
+        // Navegar para a tela de admin se o login for bem-sucedido
+        if (context.mounted) {
+          Navigator.pushReplacementNamed(context, '/admin');
+        }
       }
     } catch (e) {
       // Mostrar erro se ocorrer
@@ -66,7 +78,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
       }
     }
   }
-  
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(

@@ -78,7 +78,7 @@ class ChatbotAuthProvider extends ChangeNotifier {
         } catch (e) {
           print('Erro ao inicializar provider: $e');
           // Fazer logout para garantir consistência
-          await _auth.signOut();
+          await logout();
           _currentUser = null;
           _isAdminLoggedIn = false;
           notifyListeners();
@@ -90,7 +90,7 @@ class ChatbotAuthProvider extends ChangeNotifier {
     } catch (e) {
       print('Erro geral ao inicializar provider: $e');
       // Fazer logout para garantir consistência
-      await _auth.signOut();
+      await logout();
       _currentUser = null;
       _isAdminLoggedIn = false;
       notifyListeners();
@@ -130,7 +130,7 @@ class ChatbotAuthProvider extends ChangeNotifier {
   }
 
   // Login para cozinha - MÉTODO CORRIGIDO
-  Future<void> loginKitchen(String email, String password) async {
+  Future<bool> loginKitchen(String email, String password) async {
     try {
       print('Iniciando login para cozinha: $email');
       
@@ -139,24 +139,36 @@ class ChatbotAuthProvider extends ChangeNotifier {
       }
       
       // Fazer logout primeiro para evitar conflitos de estado
-      await _auth.signOut();
+      await logout();
       
       // Tentar fazer login com método simplificado
-      await _auth.signInWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
-      
-      print('Login da cozinha bem-sucedido');
-      
-      // Definir estado
-      _isKitchenLoggedIn = true;
-      _isAdminLoggedIn = false;
-      _currentUser = null;
-      
-      notifyListeners();
-      
-      return;
+      try {
+        await _auth.signInWithEmailAndPassword(
+          email: email,
+          password: password,
+        );
+        
+        // Verificar se o login foi bem-sucedido verificando o usuário atual
+        final user = _auth.currentUser;
+        if (user != null && user.email == email) {
+          print('Login da cozinha bem-sucedido');
+          
+          // Definir estado
+          _isKitchenLoggedIn = true;
+          _isAdminLoggedIn = false;
+          _currentUser = null;
+          
+          notifyListeners();
+          
+          return true;
+        } else {
+          print('Login da cozinha falhou: usuário atual não corresponde');
+          return false;
+        }
+      } catch (e) {
+        print('Erro ao fazer login da cozinha: $e');
+        return false;
+      }
     } catch (e) {
       print('Erro no login da cozinha: $e');
       // Garantir que o estado seja limpo em caso de erro
@@ -169,7 +181,7 @@ class ChatbotAuthProvider extends ChangeNotifier {
   }
   
   // Login para admin
-  Future<void> loginAdmin(String email, String password) async {
+  Future<bool> loginAdmin(String email, String password) async {
     try {
       print('Iniciando login para admin: $email');
       
@@ -178,24 +190,36 @@ class ChatbotAuthProvider extends ChangeNotifier {
       }
       
       // Fazer logout primeiro para evitar conflitos de estado
-      await _auth.signOut();
+      await logout();
       
       // Tentar fazer login
-      await _auth.signInWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
-      
-      print('Login de admin bem-sucedido');
-      
-      // Definir estado
-      _isAdminLoggedIn = true;
-      _isKitchenLoggedIn = false;
-      _currentUser = null;
-      
-      notifyListeners();
-      
-      return;
+      try {
+        await _auth.signInWithEmailAndPassword(
+          email: email,
+          password: password,
+        );
+        
+        // Verificar se o login foi bem-sucedido verificando o usuário atual
+        final user = _auth.currentUser;
+        if (user != null && user.email == email) {
+          print('Login de admin bem-sucedido');
+          
+          // Definir estado
+          _isAdminLoggedIn = true;
+          _isKitchenLoggedIn = false;
+          _currentUser = null;
+          
+          notifyListeners();
+          
+          return true;
+        } else {
+          print('Login de admin falhou: usuário atual não corresponde');
+          return false;
+        }
+      } catch (e) {
+        print('Erro ao fazer login de admin: $e');
+        return false;
+      }
     } catch (e) {
       print('Erro no login de admin: $e');
       // Garantir que o estado seja limpo em caso de erro
@@ -234,12 +258,19 @@ class ChatbotAuthProvider extends ChangeNotifier {
         print('Tentando login com email: ${user.ra} e senha gerada do telefone fornecido');
         
         // Fazer logout primeiro para evitar conflitos de estado
-        await _auth.signOut();
+        await logout();
         
-        final userCredential = await _auth.signInWithEmailAndPassword(
+        // Tentar fazer login
+        await _auth.signInWithEmailAndPassword(
           email: user.ra,
           password: password,
         );
+        
+        // Verificar se o login foi bem-sucedido
+        final currentUser = _auth.currentUser;
+        if (currentUser == null || currentUser.email != user.ra) {
+          throw Exception('Falha ao fazer login: usuário não autenticado corretamente');
+        }
         
         print('Login bem-sucedido');
         
@@ -258,7 +289,7 @@ class ChatbotAuthProvider extends ChangeNotifier {
         try {
           await _firestore
               .collection('users')
-              .doc(userCredential.user!.uid)
+              .doc(currentUser.uid)
               .set({
             'ra': user.ra,
             'phone': user.phone,
@@ -314,73 +345,73 @@ class ChatbotAuthProvider extends ChangeNotifier {
       try {
         // Criar usuário no Firebase Auth
         print('Tentando criar usuário no Firebase Auth');
-        final userCredential = await _auth.createUserWithEmailAndPassword(
+        await _auth.createUserWithEmailAndPassword(
           email: email,
           password: password,
         );
         
-        print('Usuário criado com sucesso no Firebase Auth: ${userCredential.user?.uid}');
+        // Verificar se o usuário foi criado com sucesso
+        final currentUser = _auth.currentUser;
+        if (currentUser == null || currentUser.email != email) {
+          throw Exception('Falha ao criar usuário: usuário não criado corretamente');
+        }
         
-        // Se chegou aqui, o usuário foi criado com sucesso
-        if (userCredential.user != null) {
-          // Salvar dados localmente - importante para logins futuros
-          await _saveUserToLocal(email, phone);
-          print('Dados salvos localmente');
+        print('Usuário criado com sucesso no Firebase Auth: ${currentUser.uid}');
+        
+        // Salvar dados localmente - importante para logins futuros
+        await _saveUserToLocal(email, phone);
+        print('Dados salvos localmente');
 
-          // Atualizar estado do provider - isso faz o login automático
-          _currentUser = app_models.User(
-            ra: email,
-            phone: phone,
-          );
-          _isAdminLoggedIn = false;
-          _isKitchenLoggedIn = false;
-          notifyListeners();
+        // Atualizar estado do provider - isso faz o login automático
+        _currentUser = app_models.User(
+          ra: email,
+          phone: phone,
+        );
+        _isAdminLoggedIn = false;
+        _isKitchenLoggedIn = false;
+        notifyListeners();
 
-          print('Estado do provider atualizado - usuário logado automaticamente');
+        print('Estado do provider atualizado - usuário logado automaticamente');
+        
+        // Tentar salvar dados no Firestore, mas não falhar se não conseguir
+        try {
+          print('Tentando salvar dados no Firestore');
+          await _firestore
+              .collection('users')
+              .doc(currentUser.uid)
+              .set({
+            'ra': email,
+            'phone': phone,
+            'isAdmin': false,
+            'createdAt': FieldValue.serverTimestamp(),
+            'lastLogin': FieldValue.serverTimestamp(),
+          }, SetOptions(merge: true)); // Garantir que use merge para não sobrescrever dados existentes
+          print('Dados do usuário salvos no Firestore');
+        } catch (firestoreError) {
+          print('Erro ao salvar dados no Firestore: $firestoreError');
+          // Não interromper o fluxo por causa desse erro
           
-          // Tentar salvar dados no Firestore, mas não falhar se não conseguir
+          // Tentar novamente após um breve atraso
           try {
-            print('Tentando salvar dados no Firestore');
+            await Future.delayed(Duration(seconds: 1));
             await _firestore
                 .collection('users')
-                .doc(userCredential.user!.uid)
+                .doc(currentUser.uid)
                 .set({
               'ra': email,
               'phone': phone,
               'isAdmin': false,
               'createdAt': FieldValue.serverTimestamp(),
               'lastLogin': FieldValue.serverTimestamp(),
-            }, SetOptions(merge: true)); // Garantir que use merge para não sobrescrever dados existentes
-            print('Dados do usuário salvos no Firestore');
-          } catch (firestoreError) {
-            print('Erro ao salvar dados no Firestore: $firestoreError');
-            // Não interromper o fluxo por causa desse erro
-            
-            // Tentar novamente após um breve atraso
-            try {
-              await Future.delayed(Duration(seconds: 1));
-              await _firestore
-                  .collection('users')
-                  .doc(userCredential.user!.uid)
-                  .set({
-                'ra': email,
-                'phone': phone,
-                'isAdmin': false,
-                'createdAt': FieldValue.serverTimestamp(),
-                'lastLogin': FieldValue.serverTimestamp(),
-              }, SetOptions(merge: true));
-              print('Dados do usuário salvos no Firestore na segunda tentativa');
-            } catch (retryError) {
-              print('Erro na segunda tentativa de salvar no Firestore: $retryError');
-              // Ainda não falhar o fluxo
-            }
+            }, SetOptions(merge: true));
+            print('Dados do usuário salvos no Firestore na segunda tentativa');
+          } catch (retryError) {
+            print('Erro na segunda tentativa de salvar no Firestore: $retryError');
+            // Ainda não falhar o fluxo
           }
-          
-          return;
-        } else {
-          print('Erro: userCredential.user é nulo');
-          throw Exception('Erro ao criar usuário: objeto de usuário é nulo');
         }
+        
+        return;
       } catch (authError) {
         print('Erro ao criar usuário: $authError');
         
@@ -413,10 +444,16 @@ class ChatbotAuthProvider extends ChangeNotifier {
                     
                     try {
                       // Tentar login com o telefone armazenado
-                      final userCredential = await _auth.signInWithEmailAndPassword(
+                      await _auth.signInWithEmailAndPassword(
                         email: email,
                         password: storedPassword,
                       );
+                      
+                      // Verificar se o login foi bem-sucedido
+                      final currentUser = _auth.currentUser;
+                      if (currentUser == null || currentUser.email != email) {
+                        throw Exception('Falha ao fazer login: usuário não autenticado corretamente');
+                      }
                       
                       print('Login bem-sucedido com telefone armazenado');
                       
@@ -435,87 +472,53 @@ class ChatbotAuthProvider extends ChangeNotifier {
                       try {
                         await _firestore
                             .collection('users')
-                            .doc(userCredential.user!.uid)
+                            .doc(currentUser.uid)
                             .update({
                           'lastLogin': FieldValue.serverTimestamp(),
                         });
+                        print('lastLogin atualizado no Firestore');
                       } catch (e) {
                         print('Erro ao atualizar lastLogin: $e');
-                        // Não falhar o fluxo
+                        // Não falhar o fluxo por causa desse erro
                       }
                       
                       return;
-                    } catch (storedLoginError) {
-                      print('Erro ao fazer login com telefone armazenado: $storedLoginError');
-                      // Continuar com o fluxo normal
+                    } catch (loginError) {
+                      print('Erro ao fazer login com telefone armazenado: $loginError');
+                      throw Exception('Este email já está em uso, mas não foi possível fazer login com o telefone armazenado. Por favor, use o mesmo telefone que usou para criar a conta.');
                     }
+                  } else {
+                    print('Telefone não encontrado no Firestore');
+                    throw Exception('Este email já está em uso, mas não foi possível recuperar o telefone associado. Por favor, use o mesmo telefone que usou para criar a conta.');
                   }
+                } else {
+                  print('Nenhum documento encontrado para este email no Firestore');
+                  throw Exception('Este email já está em uso, mas não foi possível recuperar os dados associados. Por favor, use o mesmo telefone que usou para criar a conta.');
                 }
               } catch (firestoreError) {
                 print('Erro ao consultar Firestore: $firestoreError');
-                // Continuar com o fluxo normal
-              }
-              
-              // Se chegou aqui, não conseguiu recuperar o telefone do Firestore
-              // ou não conseguiu fazer login com o telefone armazenado
-              // Tentar fazer login com o telefone fornecido
-              try {
-                final userCredential = await _auth.signInWithEmailAndPassword(
-                  email: email,
-                  password: password,
-                );
-                
-                print('Login bem-sucedido com telefone fornecido');
-                
-                // Atualizar dados locais
-                await _saveUserToLocal(email, phone);
-                
-                _currentUser = app_models.User(
-                  ra: email,
-                  phone: phone,
-                );
-                _isAdminLoggedIn = false;
-                _isKitchenLoggedIn = false;
-                notifyListeners();
-                
-                // Atualizar telefone no Firestore
-                try {
-                  await _firestore
-                      .collection('users')
-                      .doc(userCredential.user!.uid)
-                      .update({
-                    'phone': phone,
-                    'lastLogin': FieldValue.serverTimestamp(),
-                  });
-                  print('Telefone atualizado no Firestore');
-                } catch (e) {
-                  print('Erro ao atualizar telefone no Firestore: $e');
-                  // Não falhar o fluxo
-                }
-                
-                return;
-              } catch (loginError) {
-                print('Erro ao fazer login com telefone fornecido: $loginError');
-                throw Exception('Este email já está em uso, mas a senha não corresponde ao telefone informado. Por favor, use o mesmo telefone que usou para criar a conta.');
+                throw Exception('Este email já está em uso, mas ocorreu um erro ao tentar recuperar os dados. Por favor, use o mesmo telefone que usou para criar a conta.');
               }
             } catch (e) {
-              print('Erro ao tentar recuperar telefone ou fazer login: $e');
+              print('Erro ao tentar login com email existente: $e');
               rethrow;
             }
           } else {
-            throw Exception('Erro ao criar usuário: ${authError.message}');
+            // Propagar outros erros
+            throw Exception('Erro ao criar conta: ${authError.message}');
           }
         } else {
-          throw Exception('Erro ao criar usuário: $authError');
+          // Propagar erros não específicos
+          throw Exception('Erro não específico ao criar conta: $authError');
         }
       }
     } catch (e) {
-      print('Erro em _createUserAccount: $e');
+      print('Erro geral em _createUserAccount: $e');
       rethrow;
     }
   }
-
-  // Logout
+  
+  // Método de logout
   Future<void> logout() async {
     try {
       await _auth.signOut();
@@ -527,5 +530,10 @@ class ChatbotAuthProvider extends ChangeNotifier {
       print('Erro ao fazer logout: $e');
       rethrow;
     }
+  }
+  
+  // Método de signOut para compatibilidade com código existente
+  Future<void> signOut() async {
+    return logout();
   }
 }
