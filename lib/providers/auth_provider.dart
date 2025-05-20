@@ -10,11 +10,13 @@ class ChatbotAuthProvider extends ChangeNotifier {
 
   app_models.User? _currentUser;
   bool _isAdminLoggedIn = false;
+  bool _isKitchenLoggedIn = false;
   String? _cachedPhone;
 
   app_models.User? get currentUser => _currentUser;
   bool get isLoggedIn => _auth.currentUser != null;
   bool get isAdminLoggedIn => _isAdminLoggedIn;
+  bool get isKitchenLoggedIn => _isKitchenLoggedIn;
   String? get cachedPhone => _cachedPhone;
 
   // Inicializar o provider verificando se há um usuário logado
@@ -25,9 +27,15 @@ class ChatbotAuthProvider extends ChangeNotifier {
 
       if (firebaseUser != null) {
         try {
-          // Verificar se é o admin
+          // Verificar se é o admin ou cozinha
           if (firebaseUser.email == 'admin@p4ed.com.br') {
             _isAdminLoggedIn = true;
+            _isKitchenLoggedIn = false;
+            notifyListeners();
+            return;
+          } else if (firebaseUser.email == 'cozinha@p4ed.com.br') {
+            _isKitchenLoggedIn = true;
+            _isAdminLoggedIn = false;
             notifyListeners();
             return;
           }
@@ -118,6 +126,68 @@ class ChatbotAuthProvider extends ChangeNotifier {
       print('Dados do usuário salvos localmente: $email, $phone');
     } catch (e) {
       print('Erro ao salvar dados do usuário no armazenamento local: $e');
+    }
+  }
+
+  // Login para cozinha
+  Future<void> loginKitchen(String email, String password) async {
+    try {
+      print('Iniciando login para cozinha: $email');
+      
+      if (email != 'cozinha@p4ed.com.br') {
+        throw Exception('Email inválido para cozinha');
+      }
+      
+      // Tentar fazer login
+      final userCredential = await _auth.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+      
+      print('Login da cozinha bem-sucedido');
+      
+      // Definir estado
+      _isKitchenLoggedIn = true;
+      _isAdminLoggedIn = false;
+      _currentUser = null;
+      
+      notifyListeners();
+      
+      return;
+    } catch (e) {
+      print('Erro no login da cozinha: $e');
+      rethrow;
+    }
+  }
+  
+  // Login para admin
+  Future<void> loginAdmin(String email, String password) async {
+    try {
+      print('Iniciando login para admin: $email');
+      
+      if (email != 'admin@p4ed.com.br') {
+        throw Exception('Email inválido para administrador');
+      }
+      
+      // Tentar fazer login
+      final userCredential = await _auth.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+      
+      print('Login de admin bem-sucedido');
+      
+      // Definir estado
+      _isAdminLoggedIn = true;
+      _isKitchenLoggedIn = false;
+      _currentUser = null;
+      
+      notifyListeners();
+      
+      return;
+    } catch (e) {
+      print('Erro no login de admin: $e');
+      rethrow;
     }
   }
 

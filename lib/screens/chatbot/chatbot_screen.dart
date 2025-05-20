@@ -19,12 +19,13 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final TextEditingController _textController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
-  
   List<ChatMessage> _messages = [];
   List<MenuItem> _menuItems = [];
   Map<String, int> _cartItems = {};
   double _cartTotal = 0.0;
   bool _isLoading = false;
+  bool _waitingForDescription = false;
+  String _orderDescription = "";
   
   @override
   void initState() {
@@ -130,6 +131,20 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
   
   void _processUserMessage(String text) {
     final lowerText = text.toLowerCase();
+    
+    // Verificar se estamos esperando uma descrição
+    if (_waitingForDescription) {
+      if (lowerText.contains('confirmar')) {
+        // Usuário não quer adicionar descrição, apenas confirmar
+        _confirmOrder();
+      } else {
+        // Usuário está adicionando uma descrição
+        _orderDescription = text;
+        _addBotMessage('Descrição adicionada! Para confirmar o pedido, digite "confirmar".');
+        _waitingForDescription = false;
+      }
+      return;
+    }
     
     // Verificar se é uma confirmação de pedido
     if (lowerText.contains('confirmar')) {
@@ -276,9 +291,14 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
       }
       
       orderSummary += '\nTotal: R\$ ${_cartTotal.toStringAsFixed(2)}\n\n';
-      orderSummary += 'Está correto? Se sim, digite "confirmar". Se não, você pode refazer o pedido.';
+      orderSummary += 'Gostaria de adicionar alguma descrição ao seu pedido? Se sim, digite a descrição. Se não, apenas digite "confirmar" para finalizar o pedido.';
       
       _addBotMessage(orderSummary);
+      
+      // Indicar que estamos esperando uma possível descrição
+      setState(() {
+        _waitingForDescription = true;
+      });
       
       // Adicionar botão para adicionar mais itens após um breve atraso
       Future.delayed(const Duration(milliseconds: 500), () {
@@ -333,13 +353,15 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
     
     // Obter o próximo número de pedido sequencial
     counterProvider.getNextOrderNumber().then((orderNumber) {
-      // Dados do pedido com o número sequencial
+      // Dados do pedido com o número sequencial e descrição
       final orderData = {
         'userEmail': userEmail,
         'timestamp': FieldValue.serverTimestamp(),
         'items': orderItems,
         'total': _cartTotal,
         'orderNumber': orderNumber, // Número sequencial do pedido (1-999)
+        'description': _orderDescription, // Descrição opcional do pedido
+        'status': 'pendente', // Status inicial do pedido (para controle da cozinha)
       };
       
       // Salvar pedido no Firestore

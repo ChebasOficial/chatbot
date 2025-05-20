@@ -8,6 +8,8 @@ import 'package:chatbot/screens/login/login_screen.dart';
 import 'package:chatbot/screens/login/admin_login_screen.dart';
 import 'package:chatbot/screens/chatbot/chatbot_screen.dart';
 import 'package:chatbot/screens/admin/admin_screen.dart';
+import 'package:chatbot/screens/kitchen/kitchen_screen.dart';
+import 'package:chatbot/utils/account_initializer.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 
@@ -16,6 +18,11 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+  
+  // Inicializar contas especiais (admin e cozinha)
+  final accountInitializer = AccountInitializer();
+  await accountInitializer.initializeSpecialAccounts();
+  
   runApp(const MyApp());
 }
 
@@ -44,6 +51,7 @@ class MyApp extends StatelessWidget {
           '/admin-login': (context) => const AdminLoginScreen(),
           '/chatbot': (context) => const ChatbotScreen(),
           '/admin': (context) => const AdminScreen(),
+          '/kitchen': (context) => const KitchenScreen(),
         },
       ),
     );
