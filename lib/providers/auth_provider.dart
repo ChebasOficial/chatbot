@@ -129,7 +129,7 @@ class ChatbotAuthProvider extends ChangeNotifier {
     }
   }
 
-  // Login para cozinha
+  // Login para cozinha - MÉTODO CORRIGIDO
   Future<void> loginKitchen(String email, String password) async {
     try {
       print('Iniciando login para cozinha: $email');
@@ -138,8 +138,11 @@ class ChatbotAuthProvider extends ChangeNotifier {
         throw Exception('Email inválido para cozinha');
       }
       
-      // Tentar fazer login
-      final userCredential = await _auth.signInWithEmailAndPassword(
+      // Fazer logout primeiro para evitar conflitos de estado
+      await _auth.signOut();
+      
+      // Tentar fazer login com método simplificado
+      await _auth.signInWithEmailAndPassword(
         email: email,
         password: password,
       );
@@ -156,6 +159,11 @@ class ChatbotAuthProvider extends ChangeNotifier {
       return;
     } catch (e) {
       print('Erro no login da cozinha: $e');
+      // Garantir que o estado seja limpo em caso de erro
+      _isKitchenLoggedIn = false;
+      _isAdminLoggedIn = false;
+      _currentUser = null;
+      notifyListeners();
       rethrow;
     }
   }
@@ -169,8 +177,11 @@ class ChatbotAuthProvider extends ChangeNotifier {
         throw Exception('Email inválido para administrador');
       }
       
+      // Fazer logout primeiro para evitar conflitos de estado
+      await _auth.signOut();
+      
       // Tentar fazer login
-      final userCredential = await _auth.signInWithEmailAndPassword(
+      await _auth.signInWithEmailAndPassword(
         email: email,
         password: password,
       );
@@ -187,6 +198,11 @@ class ChatbotAuthProvider extends ChangeNotifier {
       return;
     } catch (e) {
       print('Erro no login de admin: $e');
+      // Garantir que o estado seja limpo em caso de erro
+      _isAdminLoggedIn = false;
+      _isKitchenLoggedIn = false;
+      _currentUser = null;
+      notifyListeners();
       rethrow;
     }
   }
@@ -216,6 +232,10 @@ class ChatbotAuthProvider extends ChangeNotifier {
       
       try {
         print('Tentando login com email: ${user.ra} e senha gerada do telefone fornecido');
+        
+        // Fazer logout primeiro para evitar conflitos de estado
+        await _auth.signOut();
+        
         final userCredential = await _auth.signInWithEmailAndPassword(
           email: user.ra,
           password: password,
@@ -231,6 +251,7 @@ class ChatbotAuthProvider extends ChangeNotifier {
           phone: user.phone,
         );
         _isAdminLoggedIn = false;
+        _isKitchenLoggedIn = false;
         notifyListeners();
         
         // Tentar atualizar telefone no Firestore, mas não falhar se não conseguir
@@ -312,6 +333,7 @@ class ChatbotAuthProvider extends ChangeNotifier {
             phone: phone,
           );
           _isAdminLoggedIn = false;
+          _isKitchenLoggedIn = false;
           notifyListeners();
 
           print('Estado do provider atualizado - usuário logado automaticamente');
@@ -406,6 +428,7 @@ class ChatbotAuthProvider extends ChangeNotifier {
                         phone: storedPhone,
                       );
                       _isAdminLoggedIn = false;
+                      _isKitchenLoggedIn = false;
                       notifyListeners();
                       
                       // Atualizar lastLogin no Firestore
@@ -433,18 +456,18 @@ class ChatbotAuthProvider extends ChangeNotifier {
                 // Continuar com o fluxo normal
               }
               
-              // Se não conseguiu recuperar o telefone do Firestore ou o login falhou,
-              // tentar com o telefone fornecido
-              final userCredential = await _auth.signInWithEmailAndPassword(
-                email: email,
-                password: password,
-              );
-              
-              if (userCredential.user != null) {
-                // Login bem-sucedido
-                print('Login bem-sucedido para usuário existente');
+              // Se chegou aqui, não conseguiu recuperar o telefone do Firestore
+              // ou não conseguiu fazer login com o telefone armazenado
+              // Tentar fazer login com o telefone fornecido
+              try {
+                final userCredential = await _auth.signInWithEmailAndPassword(
+                  email: email,
+                  password: password,
+                );
                 
-                // Salvar dados localmente
+                print('Login bem-sucedido com telefone fornecido');
+                
+                // Atualizar dados locais
                 await _saveUserToLocal(email, phone);
                 
                 _currentUser = app_models.User(
@@ -452,70 +475,38 @@ class ChatbotAuthProvider extends ChangeNotifier {
                   phone: phone,
                 );
                 _isAdminLoggedIn = false;
+                _isKitchenLoggedIn = false;
                 notifyListeners();
                 
-                // Tentar atualizar telefone no Firestore, mas não falhar se não conseguir
+                // Atualizar telefone no Firestore
                 try {
                   await _firestore
                       .collection('users')
                       .doc(userCredential.user!.uid)
-                      .set({
-                    'ra': email,
+                      .update({
                     'phone': phone,
-                    'isAdmin': false,
                     'lastLogin': FieldValue.serverTimestamp(),
-                  }, SetOptions(merge: true));
-                  print('Dados do usuário atualizados no Firestore');
+                  });
+                  print('Telefone atualizado no Firestore');
                 } catch (e) {
                   print('Erro ao atualizar telefone no Firestore: $e');
-                  // Não interromper o fluxo por causa desse erro
-                  
-                  // Tentar novamente após um breve atraso
-                  try {
-                    await Future.delayed(Duration(seconds: 1));
-                    await _firestore
-                        .collection('users')
-                        .doc(userCredential.user!.uid)
-                        .set({
-                      'ra': email,
-                      'phone': phone,
-                      'isAdmin': false,
-                      'lastLogin': FieldValue.serverTimestamp(),
-                    }, SetOptions(merge: true));
-                    print('Dados do usuário atualizados no Firestore na segunda tentativa');
-                  } catch (retryError) {
-                    print('Erro na segunda tentativa de atualizar no Firestore: $retryError');
-                    // Ainda não falhar o fluxo
-                  }
+                  // Não falhar o fluxo
                 }
                 
                 return;
+              } catch (loginError) {
+                print('Erro ao fazer login com telefone fornecido: $loginError');
+                throw Exception('Este email já está em uso, mas a senha não corresponde ao telefone informado. Por favor, use o mesmo telefone que usou para criar a conta.');
               }
-            } catch (loginError) {
-              print('Erro ao tentar login com email existente: $loginError');
-              throw Exception('Este email já está em uso, mas a senha não corresponde ao telefone informado. Por favor, use o mesmo telefone que usou para criar a conta.');
+            } catch (e) {
+              print('Erro ao tentar recuperar telefone ou fazer login: $e');
+              rethrow;
             }
-          } else if (authError.code == 'network-request-failed') {
-            // Erro de rede - salvar localmente e considerar sucesso
-            print('Erro de rede ao criar usuário, salvando localmente');
-            await _saveUserToLocal(email, phone);
-            
-            _currentUser = app_models.User(
-              ra: email,
-              phone: phone,
-            );
-            _isAdminLoggedIn = false;
-            notifyListeners();
-            
-            return;
-          } else if (authError.code == 'operation-not-allowed') {
-            throw Exception('Criação de conta desativada. Entre em contato com o administrador.');
           } else {
-            throw Exception('Erro ao criar conta: ${authError.message}');
+            throw Exception('Erro ao criar usuário: ${authError.message}');
           }
         } else {
-          print('Erro não específico de criação de conta: $authError');
-          throw Exception('Erro ao criar conta. Verifique sua conexão e tente novamente.');
+          throw Exception('Erro ao criar usuário: $authError');
         }
       }
     } catch (e) {
@@ -524,76 +515,16 @@ class ChatbotAuthProvider extends ChangeNotifier {
     }
   }
 
-  // Método de logout
+  // Logout
   Future<void> logout() async {
     try {
-      print('Iniciando logout');
-
-      // Desconectar do Firebase Auth
       await _auth.signOut();
-
-      // Limpar dados do usuário atual
       _currentUser = null;
       _isAdminLoggedIn = false;
-
-      // Notificar listeners sobre a mudança de estado
+      _isKitchenLoggedIn = false;
       notifyListeners();
-
-      print('Logout realizado com sucesso');
     } catch (e) {
-      print('Erro durante logout: $e');
-      rethrow;
-    }
-  }
-
-  // Login administrativo - Corrigido para ignorar erros de Firestore
-  Future<void> adminLogin(String username, String password) async {
-    try {
-      // Verificar se o email é de administrador
-      if (username != 'admin@p4ed.com.br') {
-        throw Exception('Usuário não encontrado');
-      }
-
-      try {
-        // Fazer login no Firebase Auth
-        try {
-          final userCredential = await _auth.signInWithEmailAndPassword(
-            email: username,
-            password: password,
-          );
-          
-          // Se chegou aqui, o login foi bem-sucedido
-          print('Login administrativo bem-sucedido via Firebase Auth');
-          
-          // Definir como admin logado
-          _isAdminLoggedIn = true;
-          _currentUser = null;
-          notifyListeners();
-          
-          return;
-        } catch (authError) {
-          print('Erro ao fazer login administrativo via Firebase Auth: $authError');
-          
-          // Verificar se é o erro específico de tipo
-          if (authError.toString().contains("type 'List<Object?>'")) {
-            print('Erro de tipo detectado, mas login foi bem-sucedido');
-            
-            // Mesmo com o erro, o login foi bem-sucedido
-            _isAdminLoggedIn = true;
-            _currentUser = null;
-            notifyListeners();
-            return;
-          }
-          
-          // Se não for o erro específico, propagar o erro
-          throw Exception('Credenciais inválidas');
-        }
-      } catch (e) {
-        print('Erro ao fazer login administrativo: $e');
-        rethrow;
-      }
-    } catch (e) {
-      print('Erro em adminLogin: $e');
+      print('Erro ao fazer logout: $e');
       rethrow;
     }
   }
