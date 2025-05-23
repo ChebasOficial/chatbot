@@ -82,6 +82,15 @@
       ]
     },
     {
+      "name": "intl",
+      "version": "0.18.1",
+      "dependencies": [
+        "clock",
+        "meta",
+        "path"
+      ]
+    },
+    {
       "name": "firebase_storage",
       "version": "11.6.5",
       "dependencies": [
@@ -90,15 +99,6 @@
         "firebase_storage_platform_interface",
         "firebase_storage_web",
         "flutter"
-      ]
-    },
-    {
-      "name": "intl",
-      "version": "0.18.1",
-      "dependencies": [
-        "clock",
-        "meta",
-        "path"
       ]
     },
     {
@@ -116,7 +116,7 @@
     },
     {
       "name": "firebase_auth",
-      "version": "4.16.0",
+      "version": "4.20.0",
       "dependencies": [
         "firebase_auth_platform_interface",
         "firebase_auth_web",
@@ -485,7 +485,7 @@
     },
     {
       "name": "firebase_auth_web",
-      "version": "5.8.13",
+      "version": "5.12.0",
       "dependencies": [
         "firebase_auth_platform_interface",
         "firebase_core",
@@ -493,8 +493,8 @@
         "flutter",
         "flutter_web_plugins",
         "http_parser",
-        "js",
-        "meta"
+        "meta",
+        "web"
       ]
     },
     {
@@ -511,7 +511,7 @@
     },
     {
       "name": "firebase_core_web",
-      "version": "2.22.0",
+      "version": "2.17.5",
       "dependencies": [
         "firebase_core_platform_interface",
         "flutter",
@@ -702,6 +702,11 @@
       ]
     },
     {
+      "name": "web",
+      "version": "0.5.1",
+      "dependencies": []
+    },
+    {
       "name": "http_parser",
       "version": "4.1.2",
       "dependencies": [
@@ -710,11 +715,6 @@
         "string_scanner",
         "typed_data"
       ]
-    },
-    {
-      "name": "web",
-      "version": "1.1.1",
-      "dependencies": []
     },
     {
       "name": "path_provider_windows",
