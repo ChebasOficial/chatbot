@@ -22,41 +22,42 @@ class _LoginScreenState extends State<LoginScreen> {
     mask: '(##) #####-####',
     filter: {'#': RegExp(r'[0-9]')},
   );
-  
+
   bool _isLoading = false;
   String? _errorMessage;
-  
+
   @override
   void dispose() {
     _raController.dispose();
     _phoneController.dispose();
     super.dispose();
   }
-  
+
   Future<void> _login() async {
     // Validar formulário
     if (!_formKey.currentState!.validate()) {
       return;
     }
-    
+
     // Mostrar loading
     setState(() {
       _isLoading = true;
       _errorMessage = null;
     });
-    
+
     try {
       // Obter dados do formulário
       final ra = _raController.text.trim();
       final phone = _phoneController.text.trim();
-      
+
       // Criar objeto User para passar ao provider
       final user = User(ra: ra, phone: phone);
-      
+
       // Fazer login no provider
-      final authProvider = Provider.of<ChatbotAuthProvider>(context, listen: false);
+      final authProvider =
+          Provider.of<ChatbotAuthProvider>(context, listen: false);
       await authProvider.login(user);
-      
+
       // Navegar para a tela apropriada com base no tipo de usuário
       if (context.mounted) {
         if (authProvider.isAdminLoggedIn) {
@@ -70,7 +71,7 @@ class _LoginScreenState extends State<LoginScreen> {
     } catch (e) {
       // Mostrar erro se ocorrer
       String errorMsg = e.toString();
-      
+
       setState(() {
         _errorMessage = errorMsg.replaceAll('Exception: ', '');
       });
@@ -84,7 +85,7 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     }
   }
-  
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -179,7 +180,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             validator: Validators.validateRA,
                             textInputAction: TextInputAction.next,
                           ),
-                          
+
                           // Campo de telefone - sempre visível
                           const SizedBox(height: 16),
                           CustomTextField(
@@ -194,16 +195,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             onFieldSubmitted: (_) => _login(),
                           ),
                           const SizedBox(height: 8),
-                          Text(
-                            'Telefone obrigatório para todos os logins',
-                            style: TextStyle(
-                              color: Colors.grey[600],
-                              fontSize: 12,
-                              fontStyle: FontStyle.italic,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                          
+
                           // Mensagem de erro
                           if (_errorMessage != null) ...[
                             const SizedBox(height: 16),
@@ -216,7 +208,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               textAlign: TextAlign.center,
                             ),
                           ],
-                          
+
                           const SizedBox(height: 24),
                           // Botão de login
                           CustomButton(

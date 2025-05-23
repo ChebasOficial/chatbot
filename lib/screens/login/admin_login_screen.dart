@@ -33,15 +33,16 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
     });
 
     try {
-      final authProvider = Provider.of<ChatbotAuthProvider>(context, listen: false);
-      
+      final authProvider =
+          Provider.of<ChatbotAuthProvider>(context, listen: false);
+
       if (_isKitchenLogin) {
         // Login para cozinha
         await authProvider.loginKitchen(
           _emailController.text.trim(),
           _passwordController.text.trim(),
         );
-        
+
         if (mounted) {
           Navigator.pushReplacementNamed(context, '/kitchen');
         }
@@ -52,12 +53,12 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
             _emailController.text.trim(),
             _passwordController.text.trim(),
           );
-          
+
           if (mounted) {
             Navigator.pushReplacementNamed(context, '/admin');
           }
         } else {
-          throw Exception('Email inválido para administrador');
+          throw Exception('Login ou senha inválido para administrador');
         }
       }
     } catch (e) {
@@ -122,7 +123,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                         if (value == null || value.isEmpty) {
                           return 'Por favor, insira o email';
                         }
-                        
+
                         if (_isKitchenLogin) {
                           if (value.trim() != 'cozinha@p4ed.com.br') {
                             return 'Email inválido para cozinha';
@@ -132,12 +133,13 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                             return 'Email inválido para administrador';
                           }
                         }
-                        
+
                         return null;
                       },
                       onChanged: (value) {
                         setState(() {
-                          _isKitchenLogin = value.trim() == 'cozinha@p4ed.com.br';
+                          _isKitchenLogin =
+                              value.trim() == 'cozinha@p4ed.com.br';
                         });
                       },
                     ),
@@ -153,6 +155,15 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                       validator: (value) {
                         if (value == null || value.isEmpty) {
                           return 'Por favor, insira a senha';
+                        }
+                        if (_isKitchenLogin) {
+                          if (value.trim() != 'cozinha123') {
+                            return 'Senha inválido para cozinha';
+                          }
+                        } else {
+                          if (value.trim() != 'admin123') {
+                            return 'Senha inválido para administrador';
+                          }
                         }
                         return null;
                       },
