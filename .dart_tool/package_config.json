@@ -446,6 +446,12 @@
       "languageVersion": "3.1"
     },
     {
+      "name": "string_similarity",
+      "rootUri": "file:///Users/chebas/.pub-cache/hosted/pub.dev/string_similarity-2.1.1",
+      "packageUri": "lib/",
+      "languageVersion": "2.12"
+    },
+    {
       "name": "term_glyph",
       "rootUri": "file:///Users/chebas/.pub-cache/hosted/pub.dev/term_glyph-1.2.2",
       "packageUri": "lib/",

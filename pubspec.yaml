@@ -1,54 +1,32 @@
 name: chatbot
 description: Aplicativo de chatbot com autenticação Firebase
 publish_to: 'none'
-version: 1.0.0+1 # Considere incrementar esta versão após atualizar as dependências
+version: 1.0.0+1
 
 environment:
-  sdk: '>=3.0.0 <4.0.0' # Verifique a compatibilidade com as novas versões dos pacotes, se necessário
+  sdk: '>=3.0.0 <4.0.0'
 
 dependencies:
   flutter:
     sdk: flutter
 
-  # Cupertino Icons (geralmente mantido atualizado pelo Flutter)
-  cupertino_icons: ^1.0.2 # Ou verifique a versão mais recente
-
-  # Gerenciamento de Estado
-  provider: ^6.0.5 # Verifique a versão compatível mais recente
-
-  # Armazenamento Local
-  shared_preferences: ^2.2.2 # Verifique a versão compatível mais recente
-
-  # Formatação de Input
-  mask_text_input_formatter: ^2.4.0 # Verifique a versão compatível mais recente
-
-  # Firebase Core (Atualizado)
-  firebase_core: ^2.32.0 # Versão atualizada (exemplo, verifique no pub.dev)
-
-  # Firebase Auth (Atualizado)
-  firebase_auth: ^4.19.6 # Versão atualizada (exemplo, verifique no pub.dev)
-
-  # Cloud Firestore (Atualizado)
-  cloud_firestore: ^4.17.5 # Versão atualizada (exemplo, verifique no pub.dev)
-
-  # Firebase Storage (Atualizado)
-  firebase_storage: ^11.6.5 # Versão corrigida (sugerida pelo Flutter)
-
-  # Internacionalização
-  intl: ^0.18.1 # Verifique a versão compatível mais recente
-
-  # Image Picker
-  image_picker: ^0.8.6 # Verifique a versão compatível mais recente
-
-  # Geração de UUID
-  uuid: ^3.0.7 # Verifique a versão compatível mais recente
+  cupertino_icons: ^1.0.2
+  provider: ^6.0.5
+  shared_preferences: ^2.2.2
+  mask_text_input_formatter: ^2.4.0
+  firebase_core: ^2.32.0
+  firebase_auth: ^4.19.6
+  cloud_firestore: ^4.17.5
+  firebase_storage: ^11.6.5
+  intl: ^0.18.1
+  image_picker: ^0.8.6
+  uuid: ^3.0.7
+  string_similarity: ^2.0.0 # Adicionado para correspondência flexível
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-
-  # Lints (geralmente mantido atualizado)
-  flutter_lints: ^2.0.0 # Ou verifique a versão mais recente
+  flutter_lints: ^2.0.0
 
 flutter:
   uses-material-design: true
