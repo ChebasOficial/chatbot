@@ -154,7 +154,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             decoration: PoliedroFoodStyle.inputDecoration(
                               labelText: 'Registro Acadêmico (R.A.)',
                               hintText: '12345678@p4ed.com.br',
-                              prefixIcon: const Icon(Icons.person),
+                              prefixIcon: Icons.person,
                             ),
                             validator: Validators.validateRA,
                             textInputAction: TextInputAction.next,
@@ -167,7 +167,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             decoration: PoliedroFoodStyle.inputDecoration(
                               labelText: 'Telefone',
                               hintText: '(11) 98765-4321',
-                              prefixIcon: const Icon(Icons.phone),
+                              prefixIcon: Icons.phone,
                             ),
                             keyboardType: TextInputType.phone,
                             inputFormatters: [_phoneMask],

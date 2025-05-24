@@ -32,12 +32,9 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
 
   // Mapa para mapear números por extenso para dígitos
   final Map<String, int> _numberWords = {
-    'um': 1,
-    'uma': 1,
-    'dois': 2,
-    'duas': 2,
-    'três': 3,
-    'tres': 3,
+    'um': 1, 'uma': 1,
+    'dois': 2, 'duas': 2,
+    'três': 3, 'tres': 3,
     'quatro': 4,
     'cinco': 5,
     'seis': 6,
@@ -48,16 +45,12 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
     'onze': 11,
     'doze': 12,
     'treze': 13,
-    'quatorze': 14,
-    'catorze': 14,
+    'quatorze': 14, 'catorze': 14,
     'quinze': 15,
-    'dezesseis': 16,
-    'dezasseis': 16,
-    'dezessete': 17,
-    'dezassete': 17,
+    'dezesseis': 16, 'dezasseis': 16,
+    'dezessete': 17, 'dezassete': 17,
     'dezoito': 18,
-    'dezenove': 19,
-    'dezanove': 19,
+    'dezenove': 19, 'dezanove': 19,
     'vinte': 20,
   };
 
@@ -125,62 +118,62 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
   ];
 
   // Palavras-chave que indicam incremento
-  final List<String> _incrementKeywords = [
-    'mais',
-    'outro',
-    'outra',
-    'adicionar',
-    'adiciona',
-    'coloca',
-    'colocar'
-  ];
+  final List<String> _incrementKeywords = ['mais', 'outro', 'outra', 'adicionar', 'adiciona', 'coloca', 'colocar'];
 
   @override
   void initState() {
     super.initState();
+    // Inicializar mensagens imediatamente, sem esperar pelo post frame callback
+    _messages = [];
+    _addInitialMessages();
+    _loadMenuItems();
+  }
+  
+  // Método separado para adicionar mensagens iniciais
+  void _addInitialMessages() {
+    _messages.add(ChatMessage(
+      text: 'Olá! Bem-vindo ao chatbot da cantina. Como posso ajudar?',
+      isUser: false,
+      timestamp: DateTime.now(),
+    ));
+    
+    _messages.add(ChatMessage(
+      text: '',
+      isUser: false,
+      timestamp: DateTime.now(),
+      isActionButtons: true,
+      actions: [
+        ChatAction(
+          label: 'Ver o cardápio',
+          action: () {
+            showMenuItems();
+          },
+        ),
+      ],
+    ));
+    
+    _messages.add(ChatMessage(
+      text: '',
+      isUser: false,
+      timestamp: DateTime.now(),
+      isActionButtons: true,
+      actions: [
+        ChatAction(
+          label: 'Fazer um pedido',
+          action: () {
+            _addBotMessage('O que você gostaria de pedir hoje?');
+          },
+        ),
+      ],
+    ));
+    
+    // Forçar atualização da UI
+    if (mounted) {
+      setState(() {});
+    }
+    
+    // Garantir que a rolagem para o final seja feita após a renderização
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final authProvider =
-          Provider.of<ChatbotAuthProvider>(context, listen: false);
-      if (!authProvider.isLoggedIn) {
-        Navigator.pushReplacementNamed(context, '/login');
-        return;
-      }
-      _addBotMessage(
-          'Olá! Bem-vindo ao chatbot da cantina. Como posso ajudar?');
-      _loadMenuItems();
-
-      // Adicionar botões de opções iniciais imediatamente após a mensagem de boas-vindas
-      setState(() {
-        _messages.add(ChatMessage(
-          text: '',
-          isUser: false,
-          timestamp: DateTime.now(),
-          isActionButtons: true,
-          actions: [
-            ChatAction(
-              label: 'Ver o cardápio',
-              action: () {
-                showMenuItems();
-              },
-            ),
-          ],
-        ));
-
-        _messages.add(ChatMessage(
-          text: '',
-          isUser: false,
-          timestamp: DateTime.now(),
-          isActionButtons: true,
-          actions: [
-            ChatAction(
-              label: 'Fazer um pedido',
-              action: () {
-                _addBotMessage('O que você gostaria de pedir hoje?');
-              },
-            ),
-          ],
-        ));
-      });
       _scrollToBottom();
     });
   }
@@ -206,25 +199,28 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
           quantity: data['quantity'] ?? 0,
         );
       }).toList();
-      setState(() {
-        _menuItems = items;
-      });
+      if (mounted) {
+        setState(() {
+          _menuItems = items;
+        });
+      }
     } catch (e) {
       print('Erro ao carregar itens do cardápio: $e');
-      _addBotMessage(
-          'Desculpe, não consegui carregar o cardápio. Por favor, tente novamente mais tarde.');
+      _addBotMessage('Desculpe, não consegui carregar o cardápio. Por favor, tente novamente mais tarde.');
     }
   }
 
   void _addBotMessage(String text) {
-    setState(() {
-      _messages.add(ChatMessage(
-        text: text,
-        isUser: false,
-        timestamp: DateTime.now(),
-      ));
-    });
-    _scrollToBottom();
+    if (mounted) {
+      setState(() {
+        _messages.add(ChatMessage(
+          text: text,
+          isUser: false,
+          timestamp: DateTime.now(),
+        ));
+      });
+      _scrollToBottom();
+    }
   }
 
   void _addUserMessage(String text) {
@@ -233,16 +229,18 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
     }
     final originalText = text;
 
-    setState(() {
-      _messages.add(ChatMessage(
-        text: originalText,
-        isUser: true,
-        timestamp: DateTime.now(),
-      ));
-      _textController.clear();
-    });
-    _scrollToBottom();
-    processUserMessage(originalText);
+    if (mounted) {
+      setState(() {
+        _messages.add(ChatMessage(
+          text: originalText,
+          isUser: true,
+          timestamp: DateTime.now(),
+        ));
+        _textController.clear();
+      });
+      _scrollToBottom();
+      processUserMessage(originalText);
+    }
   }
 
   void _scrollToBottom() {
@@ -290,18 +288,15 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
   // Método para mostrar itens do menu - corrigido para ser acessível
   void showMenuItems() {
     if (_menuItems.isEmpty) {
-      _addBotMessage(
-          'Estou carregando o cardápio. Por favor, aguarde um momento e tente novamente.');
+      _addBotMessage('Estou carregando o cardápio. Por favor, aguarde um momento e tente novamente.');
       _loadMenuItems();
       return;
     }
     String menuText = 'Aqui está nosso cardápio:\n\n';
     for (var item in _menuItems) {
-      menuText +=
-          '${item.name} - R\$ ${item.price.toStringAsFixed(2)}\n${item.description}\n\n';
+      menuText += '${item.name} - R\$ ${item.price.toStringAsFixed(2)}\n${item.description}\n\n';
     }
-    menuText +=
-        'Para fazer um pedido, basta digitar o nome do item e a quantidade desejada. Por exemplo: "Quero 2 hambúrgueres".\nVocê também pode adicionar uma observação, como "com maionese extra".';
+    menuText += 'Para fazer um pedido, basta digitar o nome do item e a quantidade desejada. Por exemplo: "Quero 2 hambúrgueres".\nVocê também pode adicionar uma observação, como "com maionese extra".';
     _addBotMessage(menuText);
   }
 
@@ -324,8 +319,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
       if (oldDescription.isEmpty) {
         _addBotMessage('Descrição "$_orderDescription" adicionada.');
       } else {
-        _addBotMessage(
-            'Descrição alterada de "$oldDescription" para "$_orderDescription".');
+        _addBotMessage('Descrição alterada de "$oldDescription" para "$_orderDescription".');
       }
       _showOrderSummary();
       return;
@@ -354,8 +348,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
       return;
     }
 
-    if (normalizedText.contains('cardapio') ||
-        normalizedText.contains('menu')) {
+    if (normalizedText.contains('cardapio') || normalizedText.contains('menu')) {
       showMenuItems();
       return;
     }
@@ -365,28 +358,11 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
 
   // Implementação dos métodos auxiliares necessários
   bool _isRemoveDescriptionCommand(String normalizedText) {
-    final removeKeywords = [
-      'remover',
-      'tirar',
-      'excluir',
-      'apagar',
-      'deletar',
-      'limpar'
-    ];
-    final descriptionWords = [
-      'descricao',
-      'descrição',
-      'observacao',
-      'observação'
-    ];
-    final regex = RegExp(r'^(' +
-        removeKeywords.join('|') +
-        r')\s+(' +
-        descriptionWords.join('|') +
-        r')$');
+    final removeKeywords = ['remover', 'tirar', 'excluir', 'apagar', 'deletar', 'limpar'];
+    final descriptionWords = ['descricao', 'descrição', 'observacao', 'observação'];
+    final regex = RegExp(r'^(' + removeKeywords.join('|') + r')\s+(' + descriptionWords.join('|') + r')$');
     final altRegex = RegExp(r'^(' + removeKeywords.join('|') + r')$');
-    return _orderDescription.isNotEmpty &&
-        (regex.hasMatch(normalizedText) || altRegex.hasMatch(normalizedText));
+    return _orderDescription.isNotEmpty && (regex.hasMatch(normalizedText) || altRegex.hasMatch(normalizedText));
   }
 
   void _processRemoveDescriptionCommand() {
@@ -398,52 +374,21 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
 
   bool _isEditDescriptionCommand(String normalizedText) {
     final editKeywords = ['mudar', 'alterar', 'trocar', 'editar'];
-    final descriptionWords = [
-      'descrição',
-      'descricao',
-      'observação',
-      'observacao'
-    ];
+    final descriptionWords = ['descrição', 'descricao', 'observação', 'observacao'];
     final paraKeywords = ['para', 'por'];
-    final regex = RegExp(r'^(' +
-        editKeywords.join('|') +
-        r')\s+(' +
-        descriptionWords.join('|') +
-        r')\s+(' +
-        paraKeywords.join('|') +
-        r')\s+(.+)$');
-    final altRegex = RegExp(r'^(' +
-        editKeywords.join('|') +
-        r')\s+(' +
-        paraKeywords.join('|') +
-        r')\s+(.+)$');
-    return _orderDescription.isNotEmpty &&
-        (regex.hasMatch(normalizedText) || altRegex.hasMatch(normalizedText));
+    final regex = RegExp(r'^(' + editKeywords.join('|') + r')\s+(' + descriptionWords.join('|') + r')\s+(' + paraKeywords.join('|') + r')\s+(.+)$');
+    final altRegex = RegExp(r'^(' + editKeywords.join('|') + r')\s+(' + paraKeywords.join('|') + r')\s+(.+)$');
+    return _orderDescription.isNotEmpty && (regex.hasMatch(normalizedText) || altRegex.hasMatch(normalizedText));
   }
 
   void _processEditDescriptionCommand(String originalText) {
     final normalizedText = _normalizeText(originalText);
     final editKeywords = ['mudar', 'alterar', 'trocar', 'editar'];
-    final descriptionWords = [
-      'descrição',
-      'descricao',
-      'observação',
-      'observacao'
-    ];
+    final descriptionWords = ['descrição', 'descricao', 'observação', 'observacao'];
     final paraKeywords = ['para', 'por'];
-    final regex = RegExp(r'^(' +
-        editKeywords.join('|') +
-        r')\s+(' +
-        descriptionWords.join('|') +
-        r')\s+(' +
-        paraKeywords.join('|') +
-        r')\s+(.+)$');
-    final altRegex = RegExp(r'^(' +
-        editKeywords.join('|') +
-        r')\s+(' +
-        paraKeywords.join('|') +
-        r')\s+(.+)$');
-
+    final regex = RegExp(r'^(' + editKeywords.join('|') + r')\s+(' + descriptionWords.join('|') + r')\s+(' + paraKeywords.join('|') + r')\s+(.+)$');
+    final altRegex = RegExp(r'^(' + editKeywords.join('|') + r')\s+(' + paraKeywords.join('|') + r')\s+(.+)$');
+    
     var match = regex.firstMatch(normalizedText);
     String? newDescriptionPart;
 
@@ -459,44 +404,25 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
     if (newDescriptionPart != null) {
       String? newDescription;
       if (regex.hasMatch(normalizedText)) {
-        final originalMatch = RegExp(
-                r'^(?:' +
-                    editKeywords.join('|') +
-                    r')\s+(?:' +
-                    descriptionWords.join('|') +
-                    r')\s+(?:' +
-                    paraKeywords.join('|') +
-                    r')\s+(.+)$',
-                caseSensitive: false)
-            .firstMatch(originalText);
+        final originalMatch = RegExp(r'^(?:' + editKeywords.join('|') + r')\s+(?:' + descriptionWords.join('|') + r')\s+(?:' + paraKeywords.join('|') + r')\s+(.+)$', caseSensitive: false).firstMatch(originalText);
         newDescription = originalMatch?.group(1)?.trim();
       } else {
-        final originalMatch = RegExp(
-                r'^(?:' +
-                    editKeywords.join('|') +
-                    r')\s+(?:' +
-                    paraKeywords.join('|') +
-                    r')\s+(.+)$',
-                caseSensitive: false)
-            .firstMatch(originalText);
+        final originalMatch = RegExp(r'^(?:' + editKeywords.join('|') + r')\s+(?:' + paraKeywords.join('|') + r')\s+(.+)$', caseSensitive: false).firstMatch(originalText);
         newDescription = originalMatch?.group(1)?.trim();
       }
 
       if (newDescription == null || newDescription.isEmpty) {
-        _addBotMessage(
-            'Não consegui identificar a nova descrição. Por favor, tente novamente.');
+        _addBotMessage('Não consegui identificar a nova descrição. Por favor, tente novamente.');
         _showOrderSummary(showButtons: false);
         return;
       }
 
       String oldDescription = _orderDescription;
       _orderDescription = newDescription;
-      _addBotMessage(
-          'Descrição alterada de "$oldDescription" para "$_orderDescription".');
+      _addBotMessage('Descrição alterada de "$oldDescription" para "$_orderDescription".');
       _showOrderSummary();
     } else {
-      _addBotMessage(
-          'Não consegui entender o comando de mudança de descrição. Use o formato: "editar descrição para [novo texto]".');
+      _addBotMessage('Não consegui entender o comando de mudança de descrição. Use o formato: "editar descrição para [novo texto]".');
       _showOrderSummary(showButtons: false);
     }
   }
@@ -512,8 +438,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
   }
 
   void _handleUnclearMessage() {
-    _addBotMessage(
-        'Desculpe, não entendi. Você pode pedir algo do cardápio ou verificar o status do seu pedido.');
+    _addBotMessage('Desculpe, não entendi. Você pode pedir algo do cardápio ou verificar o status do seu pedido.');
   }
 
   void _showOrderSummary({bool showButtons = true}) {
@@ -523,8 +448,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
 
   void _confirmOrder() {
     // Implementação simplificada para evitar erros
-    _addBotMessage(
-        'Seu pedido foi confirmado! Obrigado por utilizar o Poliedro Food.');
+    _addBotMessage('Seu pedido foi confirmado! Obrigado por utilizar o Poliedro Food.');
   }
 
   @override
@@ -544,8 +468,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
           IconButton(
             icon: const Icon(Icons.exit_to_app, color: PoliedroFoodStyle.white),
             onPressed: () {
-              final authProvider =
-                  Provider.of<ChatbotAuthProvider>(context, listen: false);
+              final authProvider = Provider.of<ChatbotAuthProvider>(context, listen: false);
               authProvider.logout();
               Navigator.pushReplacementNamed(context, '/login');
             },
@@ -566,17 +489,15 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
                 itemCount: _messages.length,
                 itemBuilder: (context, index) {
                   final message = _messages[index];
-
+                  
                   if (message.isActionButtons && message.actions != null) {
                     return Padding(
-                      padding: const EdgeInsets.symmetric(
-                          vertical: PoliedroFoodStyle.spacingS),
+                      padding: const EdgeInsets.symmetric(vertical: PoliedroFoodStyle.spacingS),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: message.actions!.map((action) {
                           return Padding(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: PoliedroFoodStyle.spacingS),
+                            padding: const EdgeInsets.symmetric(horizontal: PoliedroFoodStyle.spacingS),
                             child: ElevatedButton(
                               style: PoliedroFoodStyle.primaryButtonStyle,
                               onPressed: action.action,
@@ -587,24 +508,20 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
                       ),
                     );
                   }
-
+                  
                   return Align(
-                    alignment: message.isUser
-                        ? Alignment.centerRight
-                        : Alignment.centerLeft,
+                    alignment: message.isUser ? Alignment.centerRight : Alignment.centerLeft,
                     child: Container(
-                      margin: const EdgeInsets.symmetric(
-                          vertical: PoliedroFoodStyle.spacingS),
+                      margin: const EdgeInsets.symmetric(vertical: PoliedroFoodStyle.spacingS),
                       padding: const EdgeInsets.symmetric(
                         horizontal: PoliedroFoodStyle.spacingM,
                         vertical: PoliedroFoodStyle.spacingS,
                       ),
                       decoration: BoxDecoration(
-                        color: message.isUser
-                            ? PoliedroFoodStyle.primaryBlue
+                        color: message.isUser 
+                            ? PoliedroFoodStyle.primaryBlue 
                             : PoliedroFoodStyle.white,
-                        borderRadius:
-                            BorderRadius.circular(PoliedroFoodStyle.radiusM),
+                        borderRadius: BorderRadius.circular(PoliedroFoodStyle.radiusM),
                         boxShadow: PoliedroFoodStyle.shadowSmall,
                       ),
                       child: Column(
@@ -613,8 +530,8 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
                           Text(
                             message.text,
                             style: TextStyle(
-                              color: message.isUser
-                                  ? PoliedroFoodStyle.white
+                              color: message.isUser 
+                                  ? PoliedroFoodStyle.white 
                                   : PoliedroFoodStyle.textDark,
                             ),
                           ),
@@ -623,8 +540,8 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
                             DateFormat('HH:mm').format(message.timestamp),
                             style: TextStyle(
                               fontSize: 10,
-                              color: message.isUser
-                                  ? PoliedroFoodStyle.white.withOpacity(0.7)
+                              color: message.isUser 
+                                  ? PoliedroFoodStyle.white.withOpacity(0.7) 
                                   : PoliedroFoodStyle.textLight,
                             ),
                           ),
@@ -635,7 +552,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
                 },
               ),
             ),
-
+            
             // Campo de entrada de texto
             Container(
               decoration: BoxDecoration(
@@ -670,8 +587,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
                       shape: BoxShape.circle,
                     ),
                     child: IconButton(
-                      icon: const Icon(Icons.send,
-                          color: PoliedroFoodStyle.white),
+                      icon: const Icon(Icons.send, color: PoliedroFoodStyle.white),
                       onPressed: () => _addUserMessage(_textController.text),
                     ),
                   ),
