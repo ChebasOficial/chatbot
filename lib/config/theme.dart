@@ -75,11 +75,11 @@ class PoliedroTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: poliedroGreen, width: 2),
+          borderSide: const BorderSide(color: poliedroBlue, width: 2),
         ),
       ),
       colorScheme: ColorScheme.light(
-        primary: poliedroGreen,
+        primary: poliedroBlue,
         secondary: poliedroOrange,
         tertiary: poliedroBlue,
         error: poliedroRed,

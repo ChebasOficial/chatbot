@@ -101,7 +101,7 @@ class _AdminProductsScreenState extends State<AdminProductsScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Item adicionado com sucesso!'),
-          backgroundColor: Colors.green,
+          backgroundColor: Colors.blue,
         ),
       );
     } catch (e) {
@@ -141,7 +141,7 @@ class _AdminProductsScreenState extends State<AdminProductsScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Item atualizado com sucesso!'),
-          backgroundColor: Colors.green,
+          backgroundColor: Colors.blue,
         ),
       );
     } catch (e) {
@@ -174,7 +174,7 @@ class _AdminProductsScreenState extends State<AdminProductsScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Item excluído com sucesso!'),
-          backgroundColor: Colors.green,
+          backgroundColor: Colors.blue,
         ),
       );
     } catch (e) {
@@ -268,7 +268,7 @@ class _AdminProductsScreenState extends State<AdminProductsScreen> {
                                         style: const TextStyle(
                                           fontSize: 16.0,
                                           fontWeight: FontWeight.bold,
-                                          color: Colors.green,
+                                          color: Colors.blue,
                                         ),
                                       ),
                                     ],

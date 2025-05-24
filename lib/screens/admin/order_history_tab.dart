@@ -275,7 +275,7 @@ class _OrderHistoryTabState extends State<OrderHistoryTab> {
                                           'R\$ ${total.toStringAsFixed(2)}',
                                           style: const TextStyle(
                                             fontWeight: FontWeight.bold,
-                                            color: Colors.green,
+                                            color: Colors.blue,
                                           ),
                                         ),
                                       ],

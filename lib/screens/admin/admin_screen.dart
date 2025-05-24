@@ -32,6 +32,9 @@ class _AdminScreenState extends State<AdminScreen> with SingleTickerProviderStat
         automaticallyImplyLeading: false, // Remove o botão de voltar
         bottom: TabBar(
           controller: _tabController,
+          labelColor: Colors.white,
+          unselectedLabelColor: Colors.white70,
+          indicatorColor: Colors.white,
           tabs: const [
             Tab(text: 'Produtos'),
             Tab(text: 'Histórico de Pedidos'),
