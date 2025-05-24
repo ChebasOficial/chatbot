@@ -69,10 +69,9 @@ class _InicioScreenState extends State<InicioScreen> with SingleTickerProviderSt
     final screenSize = MediaQuery.of(context).size;
     
     return Scaffold(
-      backgroundColor: PoliedroFoodStyle.white,
-      body: SafeArea(
-        child: Container(
-          decoration: PoliedroFoodStyle.gradientContainerDecoration,
+      body: Container(
+        decoration: PoliedroFoodStyle.gradientContainerDecoration,
+        child: SafeArea(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 40.0, vertical: 20.0),
             child: Column(
@@ -166,11 +165,28 @@ class _InicioScreenState extends State<InicioScreen> with SingleTickerProviderSt
                   ),
                 ),
                 
-                // Bottom Section (Rodapé)
+                // Bottom Section (Rodapé e Acesso Administrativo)
                 FadeTransition(
                   opacity: _fadeInAnimation,
                   child: Column(
                     children: [
+                      TextButton(
+                        onPressed: () {
+                          Navigator.pushNamed(context, '/admin-login');
+                        },
+                        style: ButtonStyle(
+                          backgroundColor: MaterialStateProperty.all(Colors.transparent),
+                          overlayColor: MaterialStateProperty.all(Colors.transparent.withOpacity(0.1)),
+                          foregroundColor: MaterialStateProperty.all(PoliedroFoodStyle.primaryColor),
+                          padding: MaterialStateProperty.all(
+                            const EdgeInsets.symmetric(
+                              horizontal: PoliedroFoodStyle.spacingM,
+                              vertical: PoliedroFoodStyle.spacingS,
+                            ),
+                          ),
+                        ),
+                        child: const Text('Acesso Administrativo'),
+                      ),
                       const SizedBox(height: PoliedroFoodStyle.spacingM),
                       Text(
                         '© ${DateTime.now().year} Poliedro',

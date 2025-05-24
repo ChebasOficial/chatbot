@@ -27,16 +27,76 @@ void main() async {
   runApp(const MyApp());
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
 
   @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  final ChatbotAuthProvider _authProvider = ChatbotAuthProvider();
+  final OrderProvider _orderProvider = OrderProvider();
+  final MenuProvider _menuProvider = MenuProvider();
+  bool _isInitialized = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeProviders();
+  }
+
+  Future<void> _initializeProviders() async {
+    try {
+      // Inicializar providers em ordem
+      await _authProvider.initialize();
+      await _orderProvider.initialize();
+      // Não chamar initialize no MenuProvider pois ele não tem esse método
+      // O carregamento dos itens do menu é feito sob demanda
+      
+      if (mounted) {
+        setState(() {
+          _isInitialized = true;
+        });
+      }
+    } catch (e) {
+      print('Erro ao inicializar providers: $e');
+      // Mesmo com erro, marcar como inicializado para não bloquear a UI
+      if (mounted) {
+        setState(() {
+          _isInitialized = true;
+        });
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    // Mostrar indicador de carregamento enquanto inicializa
+    if (!_isInitialized) {
+      return MaterialApp(
+        title: 'Carregando...',
+        theme: PoliedroTheme.lightTheme,
+        home: Scaffold(
+          body: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 20),
+                Text('Inicializando aplicativo...'),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => ChatbotAuthProvider()),
-        ChangeNotifierProvider(create: (_) => OrderProvider()),
-        ChangeNotifierProvider(create: (_) => MenuProvider()),
+        ChangeNotifierProvider.value(value: _authProvider),
+        ChangeNotifierProvider.value(value: _orderProvider),
+        ChangeNotifierProvider.value(value: _menuProvider),
       ],
       child: MaterialApp(
         title: 'Chatbot Poliedro',

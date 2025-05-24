@@ -21,6 +21,8 @@ class PoliedroFoodStyle {
   static const Color priceColor = Color(0xFF333333); // Cor neutra para preços
   static const Color orderIdColor = Color(0xFF333333); // Cor neutra para IDs de pedido
   static const Color totalColor = Color(0xFF333333); // Cor neutra para totais
+  static const Color neutralDark = Color(0xFF333333); // Adicionado - cor neutra para substituir cores fortes
+  static const Color primaryColor = primaryBlue; // Adicionado - alias para primaryBlue
 
   // Gradientes
   static final LinearGradient mainGradient = LinearGradient(

@@ -14,13 +14,13 @@ class ChatMessage {
   final bool isUser;
   final DateTime timestamp;
   final bool isActionButtons; // Indica se esta mensagem deve renderizar botões
-  final List<ChatAction> actions; // Lista de ações para os botões
+  final List<ChatAction>? actions; // Lista de ações para os botões (nullable)
 
   ChatMessage({
     required this.text,
     required this.isUser,
     required this.timestamp,
     this.isActionButtons = false, // Valor padrão: não é botão de ação
-    this.actions = const [], // Valor padrão: lista vazia de ações
+    this.actions, // Permitir null para compatibilidade
   });
 }

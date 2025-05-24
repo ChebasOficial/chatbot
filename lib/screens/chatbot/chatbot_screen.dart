@@ -1,14 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:provider/provider.dart';
-import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
-import 'package:chatbot/providers/auth_provider.dart';
-import 'package:chatbot/models/menu_item.dart';
 import 'package:chatbot/models/chat_message.dart';
-import 'package:chatbot/screens/confirmation_screen.dart';
-import 'package:intl/intl.dart';
-import 'package:string_similarity/string_similarity.dart';
+import 'package:chatbot/models/menu_item.dart';
+import 'package:chatbot/models/order.dart';
+import 'package:chatbot/models/order_status.dart';
+import 'package:chatbot/providers/auth_provider.dart';
+import 'package:chatbot/providers/menu_provider.dart';
+import 'package:chatbot/providers/order_provider.dart';
 import 'package:chatbot/config/style_guide.dart';
+import 'package:provider/provider.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:uuid/uuid.dart';
+import 'dart:async';
 
 class ChatbotScreen extends StatefulWidget {
   const ChatbotScreen({Key? key}) : super(key: key);
@@ -18,585 +20,958 @@ class ChatbotScreen extends StatefulWidget {
 }
 
 class _ChatbotScreenState extends State<ChatbotScreen> {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final firebase_auth.FirebaseAuth _auth = firebase_auth.FirebaseAuth.instance;
-  final TextEditingController _textController = TextEditingController();
+  final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
-  List<ChatMessage> _messages = [];
-  List<MenuItem> _menuItems = [];
-  Map<String, int> _cartItems = {}; // Map<itemId, quantity>
-  double _cartTotal = 0.0;
-  bool _isLoading = false;
-  bool _waitingForDescription = false;
-  String _orderDescription = ''; // Descrição única
-
-  // Mapa para mapear números por extenso para dígitos
-  final Map<String, int> _numberWords = {
-    'um': 1, 'uma': 1,
-    'dois': 2, 'duas': 2,
-    'três': 3, 'tres': 3,
-    'quatro': 4,
-    'cinco': 5,
-    'seis': 6,
-    'sete': 7,
-    'oito': 8,
-    'nove': 9,
-    'dez': 10,
-    'onze': 11,
-    'doze': 12,
-    'treze': 13,
-    'quatorze': 14, 'catorze': 14,
-    'quinze': 15,
-    'dezesseis': 16, 'dezasseis': 16,
-    'dezessete': 17, 'dezassete': 17,
-    'dezoito': 18,
-    'dezenove': 19, 'dezanove': 19,
-    'vinte': 20,
-  };
-
-  // Mapa para plurais irregulares comuns de alimentos (normalizados)
-  final Map<String, String> _irregularPlurals = {
-    'pao': 'paes', // pão -> pães
-    'pastel': 'pasteis', // pastel -> pastéis
-    'bombom': 'bombons', // bombom -> bombons
-    'pudim': 'pudins', // pudim -> pudins
-    'alemao': 'alemaes', // alemão -> alemães (ex: pão alemão)
-    'frances': 'franceses', // francês -> franceses (ex: pão francês)
-    'ingles': 'ingleses', // inglês -> ingleses (ex: molho inglês)
-    'arroz': 'arroz', // arroz -> arroz (plural igual)
-    'feijao': 'feijoes', // feijão -> feijões
-    'limao': 'limoes', // limão -> limões
-    'mamao': 'mamoes', // mamão -> mamões
-    'mel': 'meis', // mel -> méis (ou meles)
-    'alcool': 'alcoois', // álcool -> álcoois
-    'barril': 'barris', // barril -> barris (ex: barril de chopp)
-    'cafe': 'cafes', // café -> cafés
-    'sanduiche': 'sanduiches', // sanduíche -> sanduíches
-    'hamburguer': 'hamburgueres', // hambúrguer -> hambúrgueres
-    'salgado': 'salgados', // salgado -> salgados
-    'refrigerante': 'refrigerantes', // refrigerante -> refrigerantes
-    'suco': 'sucos', // suco -> sucos
-    'agua': 'aguas', // água -> águas
-    'sobremesa': 'sobremesas', // sobremesa -> sobremesas
-    'doce': 'doces', // doce -> doces
-    'salada': 'saladas', // salada -> saladas
-  };
-
-  // Palavras-chave que indicam uma descrição/comentário
-  final List<String> _descriptionKeywords = [
-    'com',
-    'sem',
-    'extra',
-    'menos',
-    'mais',
-    'bem passado',
-    'mal passado',
-    'ao ponto',
-    'ponto da carne',
-    'sem cebola',
-    'sem picles',
-    'com gelo',
-    'sem gelo',
-    'quente',
-    'frio',
-    'gelado',
-    'temperatura ambiente',
-    'adicional',
-    'adicionar',
-    'retirar',
-    'tirar',
-    'colocar',
-    'pouco',
-    'muito',
-    'bastante',
-    'médio',
-    'medio',
-    'grande',
-    'pequeno',
-    'observacao', // Adicionado
-    'descricao' // Adicionado
-  ];
-
-  // Palavras-chave que indicam incremento
-  final List<String> _incrementKeywords = ['mais', 'outro', 'outra', 'adicionar', 'adiciona', 'coloca', 'colocar'];
+  final List<ChatMessage> _messages = [];
+  final List<PoliedroOrderItem> _cart = [];
+  String _orderDescription = '';
+  bool _isInitialized = false;
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    // Inicializar mensagens imediatamente, sem esperar pelo post frame callback
-    _messages = [];
-    _addInitialMessages();
-    _loadMenuItems();
-  }
-  
-  // Método separado para adicionar mensagens iniciais
-  void _addInitialMessages() {
-    _messages.add(ChatMessage(
-      text: 'Olá! Bem-vindo ao chatbot da cantina. Como posso ajudar?',
-      isUser: false,
-      timestamp: DateTime.now(),
-    ));
-    
-    _messages.add(ChatMessage(
-      text: '',
-      isUser: false,
-      timestamp: DateTime.now(),
-      isActionButtons: true,
-      actions: [
-        ChatAction(
-          label: 'Ver o cardápio',
-          action: () {
-            showMenuItems();
-          },
-        ),
-      ],
-    ));
-    
-    _messages.add(ChatMessage(
-      text: '',
-      isUser: false,
-      timestamp: DateTime.now(),
-      isActionButtons: true,
-      actions: [
-        ChatAction(
-          label: 'Fazer um pedido',
-          action: () {
-            _addBotMessage('O que você gostaria de pedir hoje?');
-          },
-        ),
-      ],
-    ));
-    
-    // Forçar atualização da UI
-    if (mounted) {
-      setState(() {});
-    }
-    
-    // Garantir que a rolagem para o final seja feita após a renderização
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _scrollToBottom();
-    });
+    _initializeChat();
   }
 
   @override
   void dispose() {
-    _textController.dispose();
+    _messageController.dispose();
     _scrollController.dispose();
     super.dispose();
   }
 
-  Future<void> _loadMenuItems() async {
+  void _initializeChat() {
+    // Adicionar um pequeno atraso para garantir que o widget esteja completamente montado
+    Future.delayed(const Duration(milliseconds: 300), () {
+      if (!mounted) return;
+
+      setState(() {
+        _isLoading = false;
+
+        // Adicionar mensagens iniciais apenas se a lista estiver vazia
+        if (_messages.isEmpty) {
+          _messages.add(
+            ChatMessage(
+              text: 'Olá! Bem-vindo ao Poliedro Food!',
+              isUser: false,
+              timestamp: DateTime.now(),
+            ),
+          );
+          _messages.add(
+            ChatMessage(
+              text: 'O que você gostaria de pedir hoje?',
+              isUser: false,
+              timestamp: DateTime.now(),
+            ),
+          );
+
+          _isInitialized = true;
+        }
+      });
+
+      // Carregar o menu
+      _loadMenu();
+    });
+  }
+
+  Future<void> _loadMenu() async {
     try {
-      final snapshot = await _firestore.collection('menu_items').get();
-      final items = snapshot.docs.map((doc) {
-        final data = doc.data();
-        return MenuItem(
-          id: doc.id,
-          name: data['name'] ?? '',
-          description: data['description'] ?? '',
-          price: (data['price'] ?? 0).toDouble(),
-          imageUrl: data['imageUrl'] ?? '',
-          quantity: data['quantity'] ?? 0,
-        );
-      }).toList();
-      if (mounted) {
+      final menuProvider = Provider.of<MenuProvider>(context, listen: false);
+      await menuProvider.loadMenuItems();
+
+      if (!mounted) return;
+
+      // Verificar se o menu foi carregado com sucesso
+      if (menuProvider.menuItems.isNotEmpty) {
         setState(() {
-          _menuItems = items;
+          // Adicionar mensagem com o cardápio
+          _addBotMessage(_buildMenuText(menuProvider.menuItems));
         });
+      } else {
+        // Adicionar mensagem de erro se o menu estiver vazio
+        _addBotMessage(
+            'Desculpe, não consegui carregar o cardápio. Por favor, tente novamente mais tarde.');
       }
     } catch (e) {
-      print('Erro ao carregar itens do cardápio: $e');
-      _addBotMessage('Desculpe, não consegui carregar o cardápio. Por favor, tente novamente mais tarde.');
+      if (!mounted) return;
+
+      // Adicionar mensagem de erro em caso de exceção
+      _addBotMessage(
+          'Desculpe, ocorreu um erro ao carregar o cardápio. Por favor, tente novamente mais tarde.');
+      print('Erro ao carregar menu: $e');
     }
+  }
+
+  String _buildMenuText(List<MenuItem> menuItems) {
+    final buffer = StringBuffer();
+    buffer.writeln('Cardápio:');
+    buffer.writeln();
+
+    for (var item in menuItems) {
+      buffer.writeln('${item.name} - R\$ ${item.price.toStringAsFixed(2)}');
+      buffer.writeln(item.description);
+      buffer.writeln();
+    }
+
+    buffer.writeln(
+        'Para pedir, digite o nome do item e a quantidade. Por exemplo: "2 hambúrgueres" ou "quero um suco de laranja"');
+
+    return buffer.toString();
   }
 
   void _addBotMessage(String text) {
-    if (mounted) {
-      setState(() {
-        _messages.add(ChatMessage(
+    if (!mounted) return;
+
+    setState(() {
+      _messages.add(
+        ChatMessage(
           text: text,
           isUser: false,
           timestamp: DateTime.now(),
-        ));
-      });
-      _scrollToBottom();
-    }
+        ),
+      );
+    });
+
+    _scrollToBottom();
   }
 
   void _addUserMessage(String text) {
-    if (text.trim().isEmpty) {
-      return;
-    }
-    final originalText = text;
+    if (!mounted) return;
 
-    if (mounted) {
-      setState(() {
-        _messages.add(ChatMessage(
-          text: originalText,
+    setState(() {
+      _messages.add(
+        ChatMessage(
+          text: text,
           isUser: true,
           timestamp: DateTime.now(),
-        ));
-        _textController.clear();
-      });
-      _scrollToBottom();
-      processUserMessage(originalText);
-    }
+        ),
+      );
+    });
+
+    _scrollToBottom();
   }
 
   void _scrollToBottom() {
+    // Adicionar um pequeno atraso para garantir que a lista foi atualizada
     Future.delayed(const Duration(milliseconds: 100), () {
       if (_scrollController.hasClients) {
-        _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOut,
-        );
+        try {
+          _scrollController.animateTo(
+            _scrollController.position.maxScrollExtent,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOut,
+          );
+        } catch (e) {
+          print('Erro ao rolar para o final: $e');
+        }
       }
     });
   }
 
-  String _normalizeText(String text) {
-    String normalized = text.toLowerCase();
-    normalized = normalized
-        .replaceAll('á', 'a')
-        .replaceAll('â', 'a')
-        .replaceAll('ã', 'a')
-        .replaceAll('à', 'a');
-    normalized = normalized
-        .replaceAll('é', 'e')
-        .replaceAll('ê', 'e')
-        .replaceAll('è', 'e');
-    normalized = normalized
-        .replaceAll('í', 'i')
-        .replaceAll('î', 'i')
-        .replaceAll('ì', 'i');
-    normalized = normalized
-        .replaceAll('ó', 'o')
-        .replaceAll('ô', 'o')
-        .replaceAll('õ', 'o')
-        .replaceAll('ò', 'o');
-    normalized = normalized
-        .replaceAll('ú', 'u')
-        .replaceAll('û', 'u')
-        .replaceAll('ü', 'u')
-        .replaceAll('ù', 'u');
-    normalized = normalized.replaceAll('ç', 'c');
-    normalized = normalized.replaceAll(RegExp(r'[.,!?;:]'), '');
-    return normalized.trim();
+  void _handleSendMessage() {
+    final text = _messageController.text.trim();
+    if (text.isEmpty) return;
+
+    _addUserMessage(text);
+    _messageController.clear();
+
+    // Processar a mensagem do usuário
+    _processUserMessage(text);
   }
 
-  // Método para mostrar itens do menu - corrigido para ser acessível
-  void showMenuItems() {
-    if (_menuItems.isEmpty) {
-      _addBotMessage('Estou carregando o cardápio. Por favor, aguarde um momento e tente novamente.');
-      _loadMenuItems();
-      return;
-    }
-    String menuText = 'Aqui está nosso cardápio:\n\n';
-    for (var item in _menuItems) {
-      menuText += '${item.name} - R\$ ${item.price.toStringAsFixed(2)}\n${item.description}\n\n';
-    }
-    menuText += 'Para fazer um pedido, basta digitar o nome do item e a quantidade desejada. Por exemplo: "Quero 2 hambúrgueres".\nVocê também pode adicionar uma observação, como "com maionese extra".';
-    _addBotMessage(menuText);
-  }
-
-  // Método para processar mensagens do usuário - corrigido para ser acessível
-  void processUserMessage(String originalText) {
-    final normalizedText = _normalizeText(originalText);
-
-    if (_waitingForDescription) {
-      if (normalizedText == 'cancelar') {
-        _waitingForDescription = false;
-        _addBotMessage('Ação cancelada. Voltando ao resumo do pedido.');
-        _showOrderSummary();
-        return;
-      }
-
-      // Atualiza a descrição única
-      String oldDescription = _orderDescription;
-      _orderDescription = originalText.trim();
-      _waitingForDescription = false;
-      if (oldDescription.isEmpty) {
-        _addBotMessage('Descrição "$_orderDescription" adicionada.');
-      } else {
-        _addBotMessage('Descrição alterada de "$oldDescription" para "$_orderDescription".');
-      }
-      _showOrderSummary();
+  void _processUserMessage(String text) {
+    // Verificar se é um comando para ver o cardápio
+    if (_isViewMenuCommand(text)) {
+      _loadMenu();
       return;
     }
 
-    if (normalizedText.contains('confirmar')) {
+    // Verificar se é um comando para adicionar descrição ao pedido
+    if (_isAddDescriptionCommand(text)) {
+      _addOrderDescription(text);
+      return;
+    }
+
+    // Verificar se é um comando para confirmar o pedido
+    if (_isConfirmOrderCommand(text)) {
       _confirmOrder();
       return;
     }
 
-    // Verificar comando de REMOVER descrição
-    if (_isRemoveDescriptionCommand(normalizedText)) {
-      _processRemoveDescriptionCommand();
+    // Verificar se é um comando para sair/logout
+    if (_isLogoutCommand(text)) {
+      _showLogoutConfirmation();
       return;
     }
 
-    // Verificar comando de EDITAR descrição (substituir)
-    if (_isEditDescriptionCommand(normalizedText)) {
-      _processEditDescriptionCommand(originalText);
+    // Tentar identificar um pedido
+    final orderItems = _identifyOrderItems(text);
+    if (orderItems.isNotEmpty) {
+      _addToCart(orderItems);
       return;
     }
 
-    // Verificar se é pedido ou adição de descrição
-    if (_isPotentiallyOrderOrDescription(normalizedText)) {
-      _processOrderOrDescriptionRequest(originalText);
-      return;
-    }
-
-    if (normalizedText.contains('cardapio') || normalizedText.contains('menu')) {
-      showMenuItems();
-      return;
-    }
-
-    _handleUnclearMessage();
+    // Se chegou aqui, não entendeu o comando
+    _addBotMessage('Desculpe, não entendi. Você pode:');
+    _addBotMessage('Escolha uma opção:');
   }
 
-  // Implementação dos métodos auxiliares necessários
-  bool _isRemoveDescriptionCommand(String normalizedText) {
-    final removeKeywords = ['remover', 'tirar', 'excluir', 'apagar', 'deletar', 'limpar'];
-    final descriptionWords = ['descricao', 'descrição', 'observacao', 'observação'];
-    final regex = RegExp(r'^(' + removeKeywords.join('|') + r')\s+(' + descriptionWords.join('|') + r')$');
-    final altRegex = RegExp(r'^(' + removeKeywords.join('|') + r')$');
-    return _orderDescription.isNotEmpty && (regex.hasMatch(normalizedText) || altRegex.hasMatch(normalizedText));
+  bool _isViewMenuCommand(String text) {
+    final lowerText = text.toLowerCase();
+    return lowerText.contains('cardápio') ||
+        lowerText.contains('cardapio') ||
+        lowerText.contains('menu') ||
+        lowerText.contains('ver opções') ||
+        lowerText.contains('ver opcoes');
   }
 
-  void _processRemoveDescriptionCommand() {
-    String removedDescription = _orderDescription;
-    _orderDescription = '';
-    _addBotMessage('Descrição "$removedDescription" removida.');
+  bool _isAddDescriptionCommand(String text) {
+    if (_cart.isEmpty) return false;
+
+    final lowerText = text.toLowerCase();
+    return lowerText.contains('observação') ||
+        lowerText.contains('observacao') ||
+        lowerText.contains('descrição') ||
+        lowerText.contains('descricao') ||
+        lowerText.contains('nota') ||
+        lowerText.contains('com ') ||
+        lowerText.contains('sem ');
+  }
+
+  bool _isConfirmOrderCommand(String text) {
+    if (_cart.isEmpty) return false;
+
+    final lowerText = text.toLowerCase();
+    return lowerText.contains('confirmar') ||
+        lowerText.contains('finalizar') ||
+        lowerText.contains('concluir') ||
+        lowerText.contains('fechar') ||
+        lowerText.contains('pronto');
+  }
+
+  bool _isLogoutCommand(String text) {
+    final lowerText = text.toLowerCase();
+    return lowerText.contains('sair') ||
+        lowerText.contains('logout') ||
+        lowerText.contains('deslogar') ||
+        lowerText.contains('encerrar');
+  }
+
+  List<PoliedroOrderItem> _identifyOrderItems(String text) {
+    final menuProvider = Provider.of<MenuProvider>(context, listen: false);
+    final menuItems = menuProvider.menuItems;
+    final List<PoliedroOrderItem> result = [];
+
+    // Normalizar o texto para facilitar a comparação
+    String normalizedText = _normalizeText(text);
+
+    // Verificar explicitamente por "paes", "pães" ou "paos" antes de processar outros itens
+    if (normalizedText.contains("paes") ||
+        normalizedText.contains("pães") ||
+        normalizedText.contains("paos")) {
+      // Buscar o item "pao" no menu
+      MenuItem? paoItem;
+      try {
+        paoItem = menuItems.firstWhere(
+          (item) =>
+              _normalizeText(item.name) == "pao" ||
+              _normalizeText(item.name) == "pão",
+        );
+      } catch (e) {
+        // Item não encontrado, continuar com o processamento normal
+        print('Item "pão" não encontrado no menu');
+      }
+
+      if (paoItem != null) {
+        // Extrair quantidade - verificar todas as variações possíveis
+        int quantity = 0;
+        if (normalizedText.contains("paes")) {
+          quantity = _extractQuantity(normalizedText, "paes");
+        } else if (normalizedText.contains("pães")) {
+          quantity = _extractQuantity(normalizedText, "pães");
+        } else if (normalizedText.contains("paos")) {
+          quantity = _extractQuantity(normalizedText, "paos");
+        }
+
+        // Se não encontrou quantidade, usar 1 como padrão
+        if (quantity <= 0) quantity = 1;
+
+        result.add(PoliedroOrderItem(
+          menuItem: paoItem,
+          quantity: quantity,
+        ));
+
+        // Remover o item encontrado do texto para evitar duplicações
+        normalizedText = normalizedText
+            .replaceAll("paes", "")
+            .replaceAll("pães", "")
+            .replaceAll("paos", "")
+            .replaceAll("pao", "")
+            .replaceAll("pão", "");
+      }
+    }
+
+    // Extrair quantidade e nome do item para os demais itens
+    for (var menuItem in menuItems) {
+      // Normalizar o nome do item para facilitar a comparação
+      String normalizedItemName = _normalizeText(menuItem.name);
+
+      // Pular "pao" se já processamos "paes"
+      if ((normalizedItemName == "pao" || normalizedItemName == "pão") &&
+          result.any((item) =>
+              _normalizeText(item.menuItem.name) == normalizedItemName)) {
+        continue;
+      }
+
+      // Verificar plurais irregulares
+      List<String> possibleForms = _getPossibleForms(normalizedItemName);
+
+      for (var form in possibleForms) {
+        if (normalizedText.contains(form)) {
+          // Encontrou um item do menu
+          int quantity = _extractQuantity(normalizedText, form);
+
+          result.add(PoliedroOrderItem(
+            menuItem: menuItem,
+            quantity: quantity,
+          ));
+
+          // Remover o item encontrado do texto para evitar duplicações
+          normalizedText = normalizedText.replaceAll(form, "");
+          break;
+        }
+      }
+    }
+
+    return result;
+  }
+
+  String _normalizeText(String text) {
+    // Remover acentos e converter para minúsculas
+    String normalized = text
+        .toLowerCase()
+        .replaceAll('á', 'a')
+        .replaceAll('à', 'a')
+        .replaceAll('â', 'a')
+        .replaceAll('ã', 'a')
+        .replaceAll('é', 'e')
+        .replaceAll('ê', 'e')
+        .replaceAll('í', 'i')
+        .replaceAll('ó', 'o')
+        .replaceAll('ô', 'o')
+        .replaceAll('õ', 'o')
+        .replaceAll('ú', 'u')
+        .replaceAll('ç', 'c');
+
+    return normalized;
+  }
+
+  List<String> _getPossibleForms(String itemName) {
+    List<String> forms = [itemName];
+
+    // Adicionar formas plurais comuns
+    if (itemName.endsWith('ao')) {
+      // pão -> pães, pao -> paes
+      forms.add(itemName.substring(0, itemName.length - 2) + 'aes');
+    } else if (itemName.endsWith('el')) {
+      // pastel -> pastéis, pasteis
+      forms.add(itemName.substring(0, itemName.length - 2) + 'eis');
+    } else if (itemName.endsWith('il')) {
+      // mil -> mis
+      forms.add(itemName.substring(0, itemName.length - 2) + 'is');
+    } else if (itemName.endsWith('r')) {
+      // hambúrguer -> hambúrgueres
+      forms.add(itemName + 'es');
+    } else if (itemName.endsWith('m')) {
+      // homem -> homens
+      forms.add(itemName.substring(0, itemName.length - 1) + 'ns');
+    } else {
+      // Plural regular
+      forms.add(itemName + 's');
+    }
+
+    // Casos específicos com tratamento especial
+    if (itemName == 'pao' || itemName == 'pão') {
+      forms.clear(); // Limpar para evitar duplicações
+      forms.add('pao');
+      forms.add('pão');
+      forms.add('paes');
+      forms.add('pães');
+      forms.add('paos'); // Adicionando variação comum
+    }
+
+    return forms;
+  }
+
+  int _extractQuantity(String text, String itemName) {
+    // Padrão: número seguido do nome do item
+    RegExp regExp = RegExp(r'(\d+)\s*' + itemName);
+    var match = regExp.firstMatch(text);
+    if (match != null && match.groupCount >= 1) {
+      return int.parse(match.group(1)!);
+    }
+
+    // Verificar números por extenso
+    Map<String, int> numberWords = {
+      'um': 1,
+      'uma': 1,
+      'dois': 2,
+      'duas': 2,
+      'tres': 3,
+      'três': 3,
+      'quatro': 4,
+      'cinco': 5,
+      'seis': 6,
+      'sete': 7,
+      'oito': 8,
+      'nove': 9,
+      'dez': 10
+    };
+
+    for (var entry in numberWords.entries) {
+      if (text.contains(entry.key + ' ' + itemName) ||
+          text.contains(entry.key + itemName)) {
+        return entry.value;
+      }
+    }
+
+    // Padrão não encontrado, assumir quantidade 1
+    return 1;
+  }
+
+  void _addToCart(List<PoliedroOrderItem> items) {
+    if (items.isEmpty) return;
+
+    setState(() {
+      for (var item in items) {
+        // Verificar se o item já está no carrinho
+        int existingIndex = _cart
+            .indexWhere((cartItem) => cartItem.menuItem.id == item.menuItem.id);
+
+        if (existingIndex >= 0) {
+          // Atualizar quantidade
+          _cart[existingIndex] = PoliedroOrderItem(
+            menuItem: _cart[existingIndex].menuItem,
+            quantity: _cart[existingIndex].quantity + item.quantity,
+          );
+        } else {
+          // Adicionar novo item
+          _cart.add(item);
+        }
+      }
+    });
+
+    // Confirmar adição ao carrinho
+    if (items.length == 1) {
+      _addBotMessage(
+          'Adicionei ${items[0].quantity} ${items[0].menuItem.name} ao seu pedido.');
+    } else {
+      _addBotMessage('Adicionei os itens ao seu pedido.');
+    }
+
+    // Mostrar resumo do pedido
     _showOrderSummary();
   }
 
-  bool _isEditDescriptionCommand(String normalizedText) {
-    final editKeywords = ['mudar', 'alterar', 'trocar', 'editar'];
-    final descriptionWords = ['descrição', 'descricao', 'observação', 'observacao'];
-    final paraKeywords = ['para', 'por'];
-    final regex = RegExp(r'^(' + editKeywords.join('|') + r')\s+(' + descriptionWords.join('|') + r')\s+(' + paraKeywords.join('|') + r')\s+(.+)$');
-    final altRegex = RegExp(r'^(' + editKeywords.join('|') + r')\s+(' + paraKeywords.join('|') + r')\s+(.+)$');
-    return _orderDescription.isNotEmpty && (regex.hasMatch(normalizedText) || altRegex.hasMatch(normalizedText));
-  }
+  void _addOrderDescription(String text) {
+    // Extrair a descrição do texto
+    String description = text;
 
-  void _processEditDescriptionCommand(String originalText) {
-    final normalizedText = _normalizeText(originalText);
-    final editKeywords = ['mudar', 'alterar', 'trocar', 'editar'];
-    final descriptionWords = ['descrição', 'descricao', 'observação', 'observacao'];
-    final paraKeywords = ['para', 'por'];
-    final regex = RegExp(r'^(' + editKeywords.join('|') + r')\s+(' + descriptionWords.join('|') + r')\s+(' + paraKeywords.join('|') + r')\s+(.+)$');
-    final altRegex = RegExp(r'^(' + editKeywords.join('|') + r')\s+(' + paraKeywords.join('|') + r')\s+(.+)$');
-    
-    var match = regex.firstMatch(normalizedText);
-    String? newDescriptionPart;
+    // Remover palavras-chave comuns
+    List<String> keywordsToRemove = [
+      'observação',
+      'observacao',
+      'descrição',
+      'descricao',
+      'nota',
+      'adicionar',
+      'incluir'
+    ];
 
-    if (match != null && match.groupCount >= 4) {
-      newDescriptionPart = match.group(4);
-    } else {
-      match = altRegex.firstMatch(normalizedText);
-      if (match != null && match.groupCount >= 3) {
-        newDescriptionPart = match.group(3);
-      }
+    for (var keyword in keywordsToRemove) {
+      description = description.replaceAll(keyword, '').trim();
     }
 
-    if (newDescriptionPart != null) {
-      String? newDescription;
-      if (regex.hasMatch(normalizedText)) {
-        final originalMatch = RegExp(r'^(?:' + editKeywords.join('|') + r')\s+(?:' + descriptionWords.join('|') + r')\s+(?:' + paraKeywords.join('|') + r')\s+(.+)$', caseSensitive: false).firstMatch(originalText);
-        newDescription = originalMatch?.group(1)?.trim();
-      } else {
-        final originalMatch = RegExp(r'^(?:' + editKeywords.join('|') + r')\s+(?:' + paraKeywords.join('|') + r')\s+(.+)$', caseSensitive: false).firstMatch(originalText);
-        newDescription = originalMatch?.group(1)?.trim();
-      }
+    setState(() {
+      _orderDescription = description;
+    });
 
-      if (newDescription == null || newDescription.isEmpty) {
-        _addBotMessage('Não consegui identificar a nova descrição. Por favor, tente novamente.');
-        _showOrderSummary(showButtons: false);
-        return;
-      }
+    _addBotMessage('Adicionei a observação: "$description" ao seu pedido.');
+    _showOrderSummary();
+  }
 
-      String oldDescription = _orderDescription;
-      _orderDescription = newDescription;
-      _addBotMessage('Descrição alterada de "$oldDescription" para "$_orderDescription".');
-      _showOrderSummary();
-    } else {
-      _addBotMessage('Não consegui entender o comando de mudança de descrição. Use o formato: "editar descrição para [novo texto]".');
-      _showOrderSummary(showButtons: false);
+  void _showOrderSummary() {
+    if (_cart.isEmpty) {
+      _addBotMessage('Seu carrinho está vazio.');
+      return;
+    }
+
+    final buffer = StringBuffer();
+    buffer.writeln('Resumo do seu pedido:');
+    buffer.writeln();
+
+    double total = 0;
+
+    for (var item in _cart) {
+      double itemTotal = item.menuItem.price * item.quantity;
+      buffer.writeln(
+          '${item.quantity} x ${item.menuItem.name} - R\$ ${itemTotal.toStringAsFixed(2)}');
+      total += itemTotal;
+    }
+
+    buffer.writeln();
+    buffer.writeln('Total: R\$ ${total.toStringAsFixed(2)}');
+
+    _addBotMessage(buffer.toString());
+    _addBotMessage('O que deseja fazer?');
+
+    // Adicionar opções explícitas para o usuário como botões
+    Future.delayed(const Duration(milliseconds: 300), () {
+      if (!mounted) return;
+
+      // Criar ações para os botões
+      List<ChatAction> actions = [
+        ChatAction(
+          label: 'Confirmar',
+          action: () {
+            _processUserMessage('confirmar');
+          },
+        ),
+        ChatAction(
+          label: 'Adicionar',
+          action: () {
+            _processUserMessage('adicionar');
+          },
+        ),
+        ChatAction(
+          label: 'Cancelar',
+          action: () {
+            _processUserMessage('cancelar');
+          },
+        ),
+      ];
+
+      // Adicionar mensagem com botões
+      setState(() {
+        _messages.add(
+          ChatMessage(
+            text:
+                'Digite "confirmar" para finalizar o pedido, "adicionar" para incluir mais itens, ou "cancelar" para limpar o carrinho.',
+            isUser: false,
+            timestamp: DateTime.now(),
+            isActionButtons: true,
+            actions: actions,
+          ),
+        );
+      });
+    });
+  }
+
+  Future<void> _confirmOrder() async {
+    if (_cart.isEmpty) {
+      _addBotMessage(
+          'Seu carrinho está vazio. Adicione itens antes de confirmar o pedido.');
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      // Obter o próximo número de pedido
+      int orderNumber = await _getNextOrderNumber();
+
+      // Calcular o total do pedido
+      double total = _cart.fold(
+          0, (sum, item) => sum + (item.menuItem.price * item.quantity));
+
+      // Obter informações do usuário
+      final authProvider =
+          Provider.of<ChatbotAuthProvider>(context, listen: false);
+      final userEmail = authProvider.currentUser?.ra ?? '';
+      final userPhone = authProvider.cachedPhone ?? '';
+
+      // Criar o pedido
+      final orderId = const Uuid().v4();
+      final order = PoliedroOrder(
+        id: orderId,
+        ra: userEmail,
+        timestamp: DateTime.now(),
+        items: List<PoliedroOrderItem>.from(
+            _cart), // Criar uma cópia da lista para evitar problemas de referência
+        total: total,
+        status: OrderStatus.pending.value,
+        notes: _orderDescription,
+        orderNumber: orderNumber.toString(),
+        phone: userPhone,
+      );
+
+      // Salvar o pedido
+      final orderProvider = Provider.of<OrderProvider>(context, listen: false);
+      await orderProvider.addOrder(order);
+
+      if (!mounted) return;
+
+      setState(() {
+        _isLoading = false;
+        _cart.clear();
+        _orderDescription = '';
+      });
+
+      // Navegar para a tela de confirmação
+      Navigator.of(context).pushNamed(
+        '/confirmation',
+        arguments: {
+          'title': 'Pedido Confirmado!',
+          'message':
+              'Seu pedido #$orderNumber foi registrado com sucesso. Total: R\$ ${total.toStringAsFixed(2)}',
+          'buttonText': 'Voltar',
+          'onConfirm': () {
+            Navigator.of(context).pop();
+          },
+        },
+      );
+
+      // Adicionar mensagem de boas-vindas novamente após retornar da tela de confirmação
+      _addBotMessage('O que mais você gostaria de pedir hoje?');
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        _isLoading = false;
+      });
+
+      _addBotMessage(
+          'Desculpe, ocorreu um erro ao confirmar seu pedido. Por favor, tente novamente.');
+      print('Erro ao confirmar pedido: $e');
     }
   }
 
-  bool _isPotentiallyOrderOrDescription(String normalizedText) {
-    // Implementação simplificada para evitar erros
-    return true;
+  Future<int> _getNextOrderNumber() async {
+    try {
+      // Obter o contador atual
+      DocumentSnapshot counterDoc = await FirebaseFirestore.instance
+          .collection('counters')
+          .doc('order_number')
+          .get();
+
+      int currentValue = 0;
+
+      // Se o documento existir, obter o valor atual
+      if (counterDoc.exists) {
+        currentValue =
+            (counterDoc.data() as Map<String, dynamic>)['value'] ?? 0;
+      }
+
+      // Incrementar o contador
+      int nextValue = currentValue + 1;
+
+      // Atualizar o contador no Firestore
+      await FirebaseFirestore.instance
+          .collection('counters')
+          .doc('order_number')
+          .set({'value': nextValue});
+
+      return nextValue;
+    } catch (e) {
+      print('Erro ao obter número do pedido: $e');
+      // Gerar um número aleatório em caso de erro
+      return DateTime.now().millisecondsSinceEpoch % 1000;
+    }
   }
 
-  void _processOrderOrDescriptionRequest(String originalText) {
-    // Implementação simplificada para evitar erros
-    _addBotMessage('Entendi seu pedido. O que mais gostaria de adicionar?');
+  void _showLogoutConfirmation() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Sair'),
+        content: const Text('Tem certeza que deseja sair?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _logout();
+            },
+            child: const Text('Sair'),
+          ),
+        ],
+      ),
+    );
   }
 
-  void _handleUnclearMessage() {
-    _addBotMessage('Desculpe, não entendi. Você pode pedir algo do cardápio ou verificar o status do seu pedido.');
-  }
+  Future<void> _logout() async {
+    try {
+      final authProvider =
+          Provider.of<ChatbotAuthProvider>(context, listen: false);
+      await authProvider.logout();
 
-  void _showOrderSummary({bool showButtons = true}) {
-    // Implementação simplificada para evitar erros
-    _addBotMessage('Aqui está o resumo do seu pedido. Deseja confirmar?');
-  }
+      if (!mounted) return;
 
-  void _confirmOrder() {
-    // Implementação simplificada para evitar erros
-    _addBotMessage('Seu pedido foi confirmado! Obrigado por utilizar o Poliedro Food.');
+      // Navegar para a tela de login
+      Navigator.pushReplacementNamed(context, '/login');
+    } catch (e) {
+      print('Erro ao fazer logout: $e');
+      _addBotMessage(
+          'Desculpe, ocorreu um erro ao sair. Por favor, tente novamente.');
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    // Verificar se as mensagens iniciais foram adicionadas
+    if (!_isInitialized && !_isLoading) {
+      _initializeChat();
+    }
+
     return Scaffold(
       appBar: AppBar(
+        title: const Text('Poliedro Food'),
         backgroundColor: PoliedroFoodStyle.primaryBlue,
-        title: const Text(
-          'Poliedro Food',
-          style: TextStyle(
-            color: PoliedroFoodStyle.white,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        elevation: 0,
         actions: [
           IconButton(
-            icon: const Icon(Icons.exit_to_app, color: PoliedroFoodStyle.white),
-            onPressed: () {
-              final authProvider = Provider.of<ChatbotAuthProvider>(context, listen: false);
-              authProvider.logout();
-              Navigator.pushReplacementNamed(context, '/login');
-            },
+            icon: const Icon(Icons.exit_to_app),
+            onPressed: _showLogoutConfirmation,
           ),
         ],
       ),
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: PoliedroFoodStyle.mainGradient,
-        ),
-        child: Column(
-          children: [
-            // Lista de mensagens
-            Expanded(
-              child: ListView.builder(
-                controller: _scrollController,
-                padding: const EdgeInsets.all(PoliedroFoodStyle.spacingM),
-                itemCount: _messages.length,
-                itemBuilder: (context, index) {
-                  final message = _messages[index];
-                  
-                  if (message.isActionButtons && message.actions != null) {
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(vertical: PoliedroFoodStyle.spacingS),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: message.actions!.map((action) {
-                          return Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: PoliedroFoodStyle.spacingS),
-                            child: ElevatedButton(
-                              style: PoliedroFoodStyle.primaryButtonStyle,
-                              onPressed: action.action,
-                              child: Text(action.label),
-                            ),
-                          );
-                        }).toList(),
-                      ),
-                    );
-                  }
-                  
-                  return Align(
-                    alignment: message.isUser ? Alignment.centerRight : Alignment.centerLeft,
-                    child: Container(
-                      margin: const EdgeInsets.symmetric(vertical: PoliedroFoodStyle.spacingS),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: PoliedroFoodStyle.spacingM,
-                        vertical: PoliedroFoodStyle.spacingS,
-                      ),
-                      decoration: BoxDecoration(
-                        color: message.isUser 
-                            ? PoliedroFoodStyle.primaryBlue 
-                            : PoliedroFoodStyle.white,
-                        borderRadius: BorderRadius.circular(PoliedroFoodStyle.radiusM),
-                        boxShadow: PoliedroFoodStyle.shadowSmall,
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            message.text,
-                            style: TextStyle(
-                              color: message.isUser 
-                                  ? PoliedroFoodStyle.white 
-                                  : PoliedroFoodStyle.textDark,
-                            ),
-                          ),
-                          const SizedBox(height: PoliedroFoodStyle.spacingXS),
-                          Text(
-                            DateFormat('HH:mm').format(message.timestamp),
-                            style: TextStyle(
-                              fontSize: 10,
-                              color: message.isUser 
-                                  ? PoliedroFoodStyle.white.withOpacity(0.7) 
-                                  : PoliedroFoodStyle.textLight,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                },
-              ),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : Column(
+              children: [
+                // Lista de mensagens
+                Expanded(
+                  child: _buildMessageList(),
+                ),
+                // Campo de entrada
+                _buildInputField(),
+              ],
             ),
-            
-            // Campo de entrada de texto
-            Container(
-              decoration: BoxDecoration(
-                color: PoliedroFoodStyle.white,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 4,
-                    offset: const Offset(0, -2),
-                  ),
-                ],
-              ),
-              padding: const EdgeInsets.symmetric(
-                horizontal: PoliedroFoodStyle.spacingM,
-                vertical: PoliedroFoodStyle.spacingS,
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _textController,
-                      decoration: PoliedroFoodStyle.inputDecoration(
-                        hintText: 'Digite sua mensagem...',
-                      ),
-                      onSubmitted: (text) => _addUserMessage(text),
-                    ),
-                  ),
-                  const SizedBox(width: PoliedroFoodStyle.spacingS),
-                  Container(
-                    decoration: BoxDecoration(
-                      color: PoliedroFoodStyle.primaryBlue,
-                      shape: BoxShape.circle,
-                    ),
-                    child: IconButton(
-                      icon: const Icon(Icons.send, color: PoliedroFoodStyle.white),
-                      onPressed: () => _addUserMessage(_textController.text),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
+    );
+  }
+
+  Widget _buildMessageList() {
+    return Container(
+      width: double.infinity,
+      child: ListView.builder(
+        controller: _scrollController,
+        padding: const EdgeInsets.all(8.0),
+        itemCount: _messages.length,
+        itemBuilder: (context, index) {
+          if (index < 0 || index >= _messages.length) {
+            return const SizedBox.shrink();
+          }
+
+          final message = _messages[index];
+          return _buildMessageBubble(message);
+        },
       ),
+    );
+  }
+
+  Widget _buildMessageBubble(ChatMessage message) {
+    // Se for uma mensagem com botões de ação
+    if (!message.isUser && message.isActionButtons && message.actions != null) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Mensagem normal
+          Container(
+            margin: const EdgeInsets.symmetric(vertical: 4.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.start,
+              children: [
+                const SizedBox(width: 8.0),
+                Flexible(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16.0, vertical: 10.0),
+                    decoration: BoxDecoration(
+                      color: PoliedroFoodStyle.backgroundLight,
+                      borderRadius: BorderRadius.circular(20.0),
+                    ),
+                    child: Text(
+                      message.text,
+                      style: const TextStyle(
+                        color: Colors.black,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Botões de ação
+          Container(
+            margin: const EdgeInsets.only(top: 8.0, bottom: 16.0, left: 8.0),
+            child: Wrap(
+              spacing: 8.0,
+              runSpacing: 8.0,
+              children: message.actions!.map((action) {
+                return ElevatedButton(
+                  onPressed: action.action,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: PoliedroFoodStyle.primaryBlue,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20.0),
+                    ),
+                  ),
+                  child: Text(action.label),
+                );
+              }).toList(),
+            ),
+          ),
+        ],
+      );
+    }
+
+    // Mensagem normal (sem botões)
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 4.0),
+      child: Row(
+        mainAxisAlignment:
+            message.isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
+        children: [
+          if (!message.isUser) const SizedBox(width: 8.0),
+          Flexible(
+            child: Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
+              decoration: BoxDecoration(
+                color: message.isUser
+                    ? PoliedroFoodStyle.primaryBlue
+                    : PoliedroFoodStyle.backgroundLight,
+                borderRadius: BorderRadius.circular(20.0),
+              ),
+              child: Text(
+                message.text,
+                style: TextStyle(
+                  color: message.isUser ? Colors.white : Colors.black,
+                ),
+              ),
+            ),
+          ),
+          if (message.isUser) const SizedBox(width: 8.0),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInputField() {
+    return Container(
+      padding: const EdgeInsets.all(8.0),
+      decoration: BoxDecoration(
+        color: PoliedroFoodStyle.backgroundLight,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 4.0,
+            offset: const Offset(0, -1),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          // Campo de texto
+          Expanded(
+            child: TextField(
+              controller: _messageController,
+              decoration: const InputDecoration(
+                hintText: 'Digite sua mensagem...',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.all(Radius.circular(30.0)),
+                  borderSide: BorderSide.none,
+                ),
+                filled: true,
+                fillColor: Colors.white,
+                contentPadding: EdgeInsets.symmetric(horizontal: 16.0),
+              ),
+              onSubmitted: (_) => _handleSendMessage(),
+            ),
+          ),
+          const SizedBox(width: 8.0),
+          // Botão de enviar
+          Container(
+            decoration: const BoxDecoration(
+              color: PoliedroFoodStyle.primaryBlue,
+              shape: BoxShape.circle,
+            ),
+            child: IconButton(
+              icon: const Icon(Icons.send, color: Colors.white),
+              onPressed: _handleSendMessage,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Botões de ação
+  Widget _buildActionButtons() {
+    return Column(
+      children: [
+        if (_cart.isNotEmpty) ...[
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: _confirmOrder,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: PoliedroFoodStyle.primaryBlue,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16.0),
+              ),
+              child: const Text('Confirmar pedido'),
+            ),
+          ),
+          const SizedBox(height: 8.0),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () =>
+                  _addBotMessage('Digite sua observação para o pedido:'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: PoliedroFoodStyle.backgroundLight,
+                foregroundColor: PoliedroFoodStyle.neutralDark,
+                padding: const EdgeInsets.symmetric(vertical: 16.0),
+              ),
+              child: const Text('Adicionar observação'),
+            ),
+          ),
+        ],
+        const SizedBox(height: 8.0),
+        SizedBox(
+          width: double.infinity,
+          child: ElevatedButton(
+            onPressed: _loadMenu,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: PoliedroFoodStyle.backgroundLight,
+              foregroundColor: PoliedroFoodStyle.neutralDark,
+              padding: const EdgeInsets.symmetric(vertical: 16.0),
+            ),
+            child: const Text('Ver cardápio'),
+          ),
+        ),
+        const SizedBox(height: 8.0),
+        SizedBox(
+          width: double.infinity,
+          child: ElevatedButton(
+            onPressed: _showLogoutConfirmation,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: PoliedroFoodStyle.errorRed,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 16.0),
+            ),
+            child: const Text('Sair'),
+          ),
+        ),
+      ],
     );
   }
 }
