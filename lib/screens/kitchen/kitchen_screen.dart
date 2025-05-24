@@ -239,7 +239,7 @@ class _KitchenScreenState extends State<KitchenScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Cozinha - Pedidos Pendentes'),
+        title: const Text('Cozinha'),
         automaticallyImplyLeading: false, // Remove o botão de voltar
         actions: [
           IconButton(
