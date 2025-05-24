@@ -221,6 +221,7 @@ class _AdminProductsScreenState extends State<AdminProductsScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Gerenciar Produtos'),
+        automaticallyImplyLeading: false, // Remove o botão de voltar
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())

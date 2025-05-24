@@ -132,41 +132,39 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
       _addBotMessage('Olá! Bem-vindo ao chatbot da cantina. Como posso ajudar?');
       _loadMenuItems();
       
-      // Adicionar botões de opções iniciais após a mensagem de boas-vindas
-      Future.delayed(const Duration(milliseconds: 500), () {
-        setState(() {
-          _messages.add(ChatMessage(
-            text: '',
-            isUser: false,
-            timestamp: DateTime.now(),
-            isActionButtons: true,
-            actions: [
-              ChatAction(
-                label: 'Fazer um pedido',
-                action: () {
-                  _addBotMessage('O que você gostaria de pedir hoje?');
-                },
-              ),
-            ],
-          ));
-          
-          _messages.add(ChatMessage(
-            text: '',
-            isUser: false,
-            timestamp: DateTime.now(),
-            isActionButtons: true,
-            actions: [
-              ChatAction(
-                label: 'Ver o cardápio',
-                action: () {
-                  _showMenuItems();
-                },
-              ),
-            ],
-          ));
-        });
-        _scrollToBottom();
+      // Adicionar botões de opções iniciais imediatamente após a mensagem de boas-vindas
+      setState(() {
+        _messages.add(ChatMessage(
+          text: '',
+          isUser: false,
+          timestamp: DateTime.now(),
+          isActionButtons: true,
+          actions: [
+            ChatAction(
+              label: 'Ver o cardápio',
+              action: () {
+                _showMenuItems();
+              },
+            ),
+          ],
+        ));
+        
+        _messages.add(ChatMessage(
+          text: '',
+          isUser: false,
+          timestamp: DateTime.now(),
+          isActionButtons: true,
+          actions: [
+            ChatAction(
+              label: 'Fazer um pedido',
+              action: () {
+                _addBotMessage('O que você gostaria de pedir hoje?');
+              },
+            ),
+          ],
+        ));
       });
+      _scrollToBottom();
     });
   }
 

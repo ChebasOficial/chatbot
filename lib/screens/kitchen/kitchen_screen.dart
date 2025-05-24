@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
 import 'package:chatbot/providers/auth_provider.dart';
 import 'package:intl/intl.dart';
+import 'dart:async';
 
 class KitchenScreen extends StatefulWidget {
   const KitchenScreen({Key? key}) : super(key: key);
@@ -16,13 +17,22 @@ class _KitchenScreenState extends State<KitchenScreen> {
   bool _isLoading = false;
   List<Map<String, dynamic>> _pendingOrders = [];
   int _selectedOrderIndex = -1;
+  StreamSubscription<QuerySnapshot>? _ordersSubscription;
 
   @override
   void initState() {
     super.initState();
-    _loadPendingOrders();
+    // Usar stream em vez de chamada única para atualização automática
+    _setupOrdersStream();
   }
-
+  
+  @override
+  void dispose() {
+    // Cancelar a assinatura ao destruir o widget
+    _ordersSubscription?.cancel();
+    super.dispose();
+  }
+  
   // Função segura para ler orderNumber (aceita int ou String)
   int _parseOrderNumber(dynamic value) {
     if (value == null) {
@@ -36,79 +46,82 @@ class _KitchenScreenState extends State<KitchenScreen> {
     }
     return 0;
   }
-
-  Future<void> _loadPendingOrders() async {
+  
+  void _setupOrdersStream() {
     setState(() {
       _isLoading = true;
     });
+    
+    // Configurar stream para atualização em tempo real
+    _ordersSubscription = _firestore
+        .collection("orders")
+        .where("status", isEqualTo: "pending")
+        .orderBy("timestamp", descending: false)
+        .snapshots()
+        .listen((snapshot) {
+          final orders = snapshot.docs.map((doc) {
+            final data = doc.data();
+            // Tratamento de nulos e tipos para todos os campos relevantes
+            final orderNumber = _parseOrderNumber(data['orderNumber']);
+            final userEmail = (data['userEmail'] as String?) ?? '';
+            final timestamp = data['timestamp'] as Timestamp?;
+            final itemsData = (data['items'] as List<dynamic>?) ?? [];
+            final total = (data['total'] as num?)?.toDouble() ?? 0.0;
+            final description = (data['description'] as String?) ?? '';
 
-    try {
-      // Consulta que pode exigir índice composto (status + timestamp)
-      final snapshot = await _firestore
-          .collection("orders")
-          .where("status", isEqualTo: "pending") // Buscar pedidos pendentes
-          .orderBy("timestamp", descending: false) // Ordenar pelo mais antigo primeiro
-          .get();
+            // Mapear itens com tratamento de nulos interno
+            final items = itemsData.map((itemData) {
+              final itemMap = itemData as Map<String, dynamic>? ?? {};
+              return {
+                'name': (itemMap['name'] as String?) ?? 'Item desconhecido',
+                'quantity': (itemMap['quantity'] as int?) ?? 0,
+                'price': (itemMap['price'] as num?)?.toDouble() ?? 0.0,
+              };
+            }).toList();
 
-      final orders = snapshot.docs.map((doc) {
-        final data = doc.data();
-        // Tratamento de nulos e tipos para todos os campos relevantes
-        final orderNumber = _parseOrderNumber(data['orderNumber']); // Usar função segura
-        final userEmail = (data['userEmail'] as String?) ?? ''; // Usar email
-        final timestamp = data['timestamp'] as Timestamp?;
-        final itemsData = (data['items'] as List<dynamic>?) ?? [];
-        final total = (data['total'] as num?)?.toDouble() ?? 0.0;
-        final description = (data['description'] as String?) ?? ''; // Ler descrição
+            return {
+              'id': doc.id,
+              'orderNumber': orderNumber,
+              'userEmail': userEmail,
+              'timestamp': timestamp,
+              'items': items,
+              'total': total,
+              'description': description,
+            };
+          }).toList();
 
-        // Mapear itens com tratamento de nulos interno
-        final items = itemsData.map((itemData) {
-          final itemMap = itemData as Map<String, dynamic>? ?? {};
-          return {
-            'name': (itemMap['name'] as String?) ?? 'Item desconhecido',
-            'quantity': (itemMap['quantity'] as int?) ?? 0,
-            'price': (itemMap['price'] as num?)?.toDouble() ?? 0.0,
-          };
-        }).toList();
-
-        return {
-          'id': doc.id,
-          'orderNumber': orderNumber,
-          'userEmail': userEmail, // Salvar email
-          'timestamp': timestamp,
-          'items': items,
-          'total': total,
-          'description': description, // Salvar descrição
-        };
-      }).toList();
-
-      setState(() {
-        _pendingOrders = orders;
-        _isLoading = false;
-        _selectedOrderIndex = _pendingOrders.isNotEmpty ? 0 : -1;
-      });
-    } catch (e) {
-      print('Erro ao carregar pedidos pendentes: $e');
-      setState(() {
-        _isLoading = false;
-      });
-
-      if (mounted) {
-         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            // Mostrar mensagem de erro completa, incluindo link do índice se houver
-            content: Text('Erro ao carregar pedidos: ${e.toString()}'),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 10), // Aumentar duração para ler o link
-            action: SnackBarAction(
-              label: 'FECHAR',
-              onPressed: () {
-                ScaffoldMessenger.of(context).hideCurrentSnackBar();
-              },
-            ),
-          ),
-        );
-      }
-    }
+          if (mounted) {
+            setState(() {
+              _pendingOrders = orders;
+              _isLoading = false;
+              // Manter o índice selecionado se possível, ou ajustar para o primeiro item
+              if (_selectedOrderIndex >= _pendingOrders.length) {
+                _selectedOrderIndex = _pendingOrders.isNotEmpty ? 0 : -1;
+              }
+            });
+          }
+        }, onError: (e) {
+          print('Erro ao carregar pedidos pendentes: $e');
+          if (mounted) {
+            setState(() {
+              _isLoading = false;
+            });
+            
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Erro ao carregar pedidos: ${e.toString()}'),
+                backgroundColor: Colors.red,
+                duration: const Duration(seconds: 10),
+                action: SnackBarAction(
+                  label: 'FECHAR',
+                  onPressed: () {
+                    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                  },
+                ),
+              ),
+            );
+          }
+        });
   }
 
   // Função segura para extrair RA do email
@@ -136,15 +149,8 @@ class _KitchenScreenState extends State<KitchenScreen> {
         'completedAt': FieldValue.serverTimestamp(),
       });
 
-      // Remover o pedido da lista local
+      // A atualização da lista será feita automaticamente pelo stream
       setState(() {
-        _pendingOrders.removeAt(index);
-        // Ajustar índice selecionado após remover
-        if (_pendingOrders.isEmpty) {
-          _selectedOrderIndex = -1;
-        } else if (_selectedOrderIndex >= _pendingOrders.length) {
-          _selectedOrderIndex = _pendingOrders.length - 1;
-        }
         _isLoading = false;
       });
 
@@ -197,7 +203,7 @@ class _KitchenScreenState extends State<KitchenScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: _loadPendingOrders,
+            onPressed: _setupOrdersStream, // Usar o método de stream para atualização manual também
           ),
           IconButton(
             icon: const Icon(Icons.logout),
@@ -451,10 +457,6 @@ class _KitchenScreenState extends State<KitchenScreen> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.green,
                   foregroundColor: Colors.white,
-                  textStyle: const TextStyle(
-                    fontSize: 16.0,
-                    fontWeight: FontWeight.bold,
-                  ),
                 ),
               ),
             ),
@@ -464,4 +466,3 @@ class _KitchenScreenState extends State<KitchenScreen> {
     );
   }
 }
-

@@ -4,24 +4,25 @@ class PoliedroTheme {
   // Cores principais do Poliedro baseadas no site
   static const Color poliedroGreen = Color(0xFF00A651);
   static const Color poliedroBlue = Color(0xFF0071BC);
+  static const Color poliedroLightBlue = Color(0xFF00A0E3); // Azul claro do Poliedro
   static const Color poliedroOrange = Color(0xFFF7941D);
   static const Color poliedroPurple = Color(0xFF662D91);
   static const Color poliedroRed = Color(0xFFED1C24);
   
   // Cor primária e variações
   static const MaterialColor primarySwatch = MaterialColor(
-    0xFF00A651, // Verde Poliedro como cor primária
+    0xFF00A0E3, // Azul claro Poliedro como cor primária
     <int, Color>{
-      50: Color(0xFFE0F7EA),
-      100: Color(0xFFB3EAD1),
-      200: Color(0xFF80DCB5),
-      300: Color(0xFF4DCE99),
-      400: Color(0xFF26C485),
-      500: Color(0xFF00A651), // Cor base
-      600: Color(0xFF009E4A),
-      700: Color(0xFF009540),
-      800: Color(0xFF008B37),
-      900: Color(0xFF007B27),
+      50: Color(0xFFE0F4FB),
+      100: Color(0xFFB3E3F5),
+      200: Color(0xFF80D1EF),
+      300: Color(0xFF4DBFE8),
+      400: Color(0xFF26B1E3),
+      500: Color(0xFF00A0E3), // Cor base
+      600: Color(0xFF0098DD),
+      700: Color(0xFF008ED6),
+      800: Color(0xFF0084CF),
+      900: Color(0xFF0073C2),
     },
   );
 
@@ -29,11 +30,11 @@ class PoliedroTheme {
   static ThemeData get lightTheme {
     return ThemeData(
       primarySwatch: primarySwatch,
-      primaryColor: poliedroGreen,
+      primaryColor: poliedroLightBlue,
       hintColor: poliedroBlue,
       scaffoldBackgroundColor: Colors.white,
       appBarTheme: const AppBarTheme(
-        backgroundColor: poliedroGreen,
+        backgroundColor: poliedroLightBlue,
         elevation: 0,
         iconTheme: IconThemeData(color: Colors.white),
         titleTextStyle: TextStyle(

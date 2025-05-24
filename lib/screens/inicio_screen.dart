@@ -35,10 +35,7 @@ class _InicioScreenState extends State<InicioScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(
-        title: const Text('Poliedro Food'),
-        // Mantendo o estilo do tema Poliedro
-      ),
+      // AppBar removida conforme solicitado
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 40.0, vertical: 20.0),
@@ -52,17 +49,9 @@ class _InicioScreenState extends State<InicioScreen> {
                   // Logo do Poliedro
                   Column(
                     children: [
-                      Image.asset(
-                        'lib/images/poliedro_logo.svg',
-                        height: 80,
-                        fit: BoxFit.contain,
-                      ),
+                      // Imagem removida conforme solicitado
                       const SizedBox(height: 16),
-                      const Text(
-                        'Poliedro Food',
-                        style: TextStyle(
-                            fontSize: 28, fontWeight: FontWeight.bold),
-                      ),
+                      // Título removido conforme solicitado
                     ],
                   ),
                 ],
