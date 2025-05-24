@@ -10,32 +10,28 @@ class OrderProvider extends ChangeNotifier {
   List<Order> get orders => _orders;
 
   // Getters para filtrar pedidos por status
-  List<Order> get pendingOrders => _orders
-      .where((order) => order.status == OrderStatus.pending.value)
-      .toList();
-
-  List<Order> get inProgressOrders => _orders
-      .where((order) => order.status == OrderStatus.inProgress.value)
-      .toList();
-
-  List<Order> get completedOrders => _orders
-      .where((order) => order.status == OrderStatus.completed.value)
-      .toList();
-
-  List<Order> get archivedOrders => _orders
-      .where((order) => order.status == OrderStatus.archived.value)
-      .toList();
+  List<Order> get pendingOrders =>
+      _orders.where((order) => order.status == OrderStatus.pending.value).toList();
+  
+  List<Order> get inProgressOrders =>
+      _orders.where((order) => order.status == OrderStatus.inProgress.value).toList();
+  
+  List<Order> get completedOrders =>
+      _orders.where((order) => order.status == OrderStatus.completed.value).toList();
+  
+  List<Order> get archivedOrders =>
+      _orders.where((order) => order.status == OrderStatus.archived.value).toList();
 
   // Getters para calcular totais
   double get pendingTotal =>
       pendingOrders.fold(0, (sum, order) => sum + order.total);
-
+  
   double get inProgressTotal =>
       inProgressOrders.fold(0, (sum, order) => sum + order.total);
-
+  
   double get completedTotal =>
       completedOrders.fold(0, (sum, order) => sum + order.total);
-
+  
   double get dayTotal => pendingTotal + inProgressTotal + completedTotal;
 
   // Inicializar o provider carregando os pedidos do armazenamento local

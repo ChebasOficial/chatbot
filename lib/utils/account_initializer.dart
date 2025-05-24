@@ -48,25 +48,22 @@ class AccountInitializer {
         // Se o erro for "user-not-found", criar a conta
         if (e is FirebaseAuthException && e.code == 'user-not-found') {
           print('Conta $email não encontrada, criando...');
-
+          
           // Criar a conta no Firebase Auth
           final userCredential = await _auth.createUserWithEmailAndPassword(
             email: email,
             password: password,
           );
-
+          
           // Salvar dados adicionais no Firestore
-          await _firestore
-              .collection('users')
-              .doc(userCredential.user!.uid)
-              .set({
+          await _firestore.collection('users').doc(userCredential.user!.uid).set({
             'email': email,
             'role': role,
             'createdAt': FieldValue.serverTimestamp(),
           });
-
+          
           print('Conta $email criada com sucesso!');
-
+          
           // Fazer logout para não interferir no fluxo normal
           await _auth.signOut();
         } else {

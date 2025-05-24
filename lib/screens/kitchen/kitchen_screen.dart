@@ -28,16 +28,19 @@ class _KitchenScreenState extends State<KitchenScreen> {
       _isLoading = true;
     });
 
-    try       final snapshot = await _firestore
+    try {
+      final snapshot = await _firestore
           .collection("orders")
           .where("status", isEqualTo: "pending") // CORRIGIDO: status correto
           .orderBy("timestamp", descending: true)
-          .get();   final orders = snapshot.docs.map((doc) {
+          .get();
+      final orders = snapshot.docs.map((doc) {
         final data = doc.data();
         return {
           'id': doc.id,
           'orderNumber': data['orderNumber'] ?? 0,
-          'userRa': data['userRa'] ?? 'RA desconhecido', // CORRIGIDO: Ler userRa
+          'userRa':
+              data['userRa'] ?? 'RA desconhecido', // CORRIGIDO: Ler userRa
           'timestamp': data['timestamp'] as Timestamp?,
           'items': data['items'] as List<dynamic>? ?? [],
           'total': (data['total'] ?? 0).toDouble(),
@@ -123,7 +126,8 @@ class _KitchenScreenState extends State<KitchenScreen> {
     if (_pendingOrders.isEmpty) return;
     setState(() {
       _selectedOrderIndex = (_selectedOrderIndex - 1) % _pendingOrders.length;
-      if (_selectedOrderIndex < 0) _selectedOrderIndex = _pendingOrders.length - 1;
+      if (_selectedOrderIndex < 0)
+        _selectedOrderIndex = _pendingOrders.length - 1;
     });
   }
 
@@ -179,7 +183,7 @@ class _KitchenScreenState extends State<KitchenScreen> {
                         ],
                       ),
                     ),
-                    
+
                     // Navegação entre pedidos
                     if (_pendingOrders.isNotEmpty)
                       Padding(
@@ -217,9 +221,10 @@ class _KitchenScreenState extends State<KitchenScreen> {
                           ],
                         ),
                       ),
-                    
+
                     // Detalhes do pedido selecionado
-                    if (_selectedOrderIndex >= 0 && _selectedOrderIndex < _pendingOrders.length)
+                    if (_selectedOrderIndex >= 0 &&
+                        _selectedOrderIndex < _pendingOrders.length)
                       Expanded(
                         child: SingleChildScrollView(
                           padding: const EdgeInsets.all(16.0),
@@ -240,7 +245,8 @@ class _KitchenScreenState extends State<KitchenScreen> {
     final items = order['items'] as List<dynamic>;
     final total = order['total'] as double;
     final description = order['description'] as String;
-    final orderNumber = (order['orderNumber'] as int).toString().padLeft(3, '0');
+    final orderNumber =
+        (order['orderNumber'] as int).toString().padLeft(3, '0');
 
     return Card(
       elevation: 4.0,
@@ -276,10 +282,11 @@ class _KitchenScreenState extends State<KitchenScreen> {
               ],
             ),
             const SizedBox(height: 12.0),
-            
+
             // RA do aluno
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 6.0),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 12.0, vertical: 6.0),
               decoration: BoxDecoration(
                 color: Colors.grey[200],
                 borderRadius: BorderRadius.circular(8.0),
@@ -293,7 +300,7 @@ class _KitchenScreenState extends State<KitchenScreen> {
               ),
             ),
             const SizedBox(height: 16.0),
-            
+
             // Descrição do pedido (se houver)
             if (description.isNotEmpty) ...[
               const Text(
@@ -318,7 +325,7 @@ class _KitchenScreenState extends State<KitchenScreen> {
                 ),
               ),
             ],
-            
+
             // Lista de itens
             const Text(
               'Itens:',
@@ -352,7 +359,7 @@ class _KitchenScreenState extends State<KitchenScreen> {
               );
             }).toList(),
             const Divider(thickness: 1.5),
-            
+
             // Total
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -375,7 +382,7 @@ class _KitchenScreenState extends State<KitchenScreen> {
               ],
             ),
             const SizedBox(height: 24.0),
-            
+
             // Botão de confirmar pedido
             SizedBox(
               width: double.infinity,

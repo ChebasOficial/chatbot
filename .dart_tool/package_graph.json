@@ -62,6 +62,11 @@
       ]
     },
     {
+      "name": "string_similarity",
+      "version": "2.1.1",
+      "dependencies": []
+    },
+    {
       "name": "uuid",
       "version": "3.0.7",
       "dependencies": [
@@ -772,11 +777,6 @@
         "meta",
         "path"
       ]
-    },
-    {
-      "name": "string_similarity",
-      "version": "2.1.1",
-      "dependencies": []
     }
   ],
   "configVersion": 1

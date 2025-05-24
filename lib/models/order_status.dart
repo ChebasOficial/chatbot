@@ -1,4 +1,9 @@
-enum OrderStatus { pending, inProgress, completed, archived }
+enum OrderStatus {
+  pending,
+  inProgress,
+  completed,
+  archived
+}
 
 // Extensão para converter OrderStatus para String
 extension OrderStatusExtension on OrderStatus {
@@ -16,7 +21,7 @@ extension OrderStatusExtension on OrderStatus {
         return 'pending';
     }
   }
-
+  
   // Método para converter String para OrderStatus
   static OrderStatus fromString(String status) {
     switch (status) {

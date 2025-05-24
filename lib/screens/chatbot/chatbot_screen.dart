@@ -1029,9 +1029,96 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
         ],
       ),
     );
-  }
-}
 
+
+  // NOVO: Função para verificar se é comando de edição
+  bool _isEditDescriptionCommand(String normalizedText) {
+    final editKeywords = ['mudar', 'alterar', 'trocar', 'editar'];
+    final descriptionKeywords = [
+      'descrição',
+      'descricao',
+      'observação',
+      'observacao'
+    ];
+    final paraKeywords = ['para', 'por'];
+
+    // Padrão: (mudar|alterar|...) (descrição|observação|...) [número] (para|por) [novo texto]
+    final regex = RegExp(r'^(' +
+        editKeywords.join('|') +
+        r')\s+(' +
+        descriptionKeywords.join('|') +
+        r')\s+(\d+)\s+(' +
+        paraKeywords.join('|') +
+        r')\s+(.+)$');
+    return regex.hasMatch(normalizedText);
+  }
+
+  // NOVO: Função para processar comando de edição
+  void _processEditDescriptionCommand(String originalText) {
+    final normalizedText = _normalizeText(originalText);
+    final editKeywords = ['mudar', 'alterar', 'trocar', 'editar'];
+    final descriptionKeywords = [
+      'descrição',
+      'descricao',
+      'observação',
+      'observacao'
+    ];
+    final paraKeywords = ['para', 'por'];
+
+    final regex = RegExp(r'^(' +
+        editKeywords.join('|') +
+        r')\s+(' +
+        descriptionKeywords.join('|') +
+        r')\s+(\d+)\s+(' +
+        paraKeywords.join('|') +
+        r')\s+(.+)$');
+
+    final match = regex.firstMatch(normalizedText);
+    if (match != null && match.groupCount >= 5) {
+      final indexStr = match.group(3);
+      final newDescriptionPart = match.group(5);
+
+      if (indexStr != null && newDescriptionPart != null) {
+        final index = int.tryParse(indexStr);
+        // Extrair a nova descrição do texto original para manter a capitalização
+        final originalMatch = RegExp(
+                r'^(?:' +
+                    editKeywords.join('|') +
+                    r')\s+(?:' +
+                    descriptionKeywords.join('|') +
+                    r')\s+' +
+                    indexStr +
+                    r'\s+(?:' +
+                    paraKeywords.join('|') +
+                    r')\s+(.+)$',
+                caseSensitive: false)
+            .firstMatch(originalText);
+
+        final newDescription =
+            originalMatch?.group(1)?.trim() ?? newDescriptionPart.trim();
+
+        if (index != null && index > 0 && index <= _orderDescriptions.length) {
+          final oldDescription = _orderDescriptions[index - 1];
+          _orderDescriptions[index - 1] = newDescription;
+          _addBotMessage(
+              'Descrição ${index} alterada de "$oldDescription" para "$newDescription".');
+          _showOrderSummary();
+        } else {
+          _addBotMessage(
+              'Número de descrição inválido. Por favor, informe um número entre 1 e ${_orderDescriptions.length}.');
+           _showOrderSummary(showButtons: false); // Evitar loop
+        }
+      } else {
+        _addBotMessage(
+            'Não consegui entender qual descrição mudar ou qual o novo texto. Use o formato: "mudar descrição [número] para [novo texto]".');
+         _showOrderSummary(showButtons: false); // Evitar loop
+      }
+    } else {
+      _addBotMessage(
+          'Não consegui entender o comando de mudança de descrição. Use o formato: "mudar descrição [número] para [novo texto]".');
+       _showOrderSummary(showButtons: false); // Evitar loop
+    }
+  }
 
   // NOVO: Função para verificar se é comando de exclusão
   bool _isDeleteDescriptionCommand(String normalizedText) {
@@ -1042,14 +1129,14 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
       'observação',
       'observacao',
       'item'
-    ]; // Inclui 'item' para 'excluir item 1' da descrição
+    ]; // Inclui 'item' para "excluir item 1" da descrição
 
     // Padrão: (excluir|remover|...) (descrição|observação|...) [número]
     final regex = RegExp(r'^(' +
         deleteKeywords.join('|') +
-        r')\s+(?:' +
+        r')\s+(?:' + // Grupo opcional para palavra chave da descrição
         descriptionKeywords.join('|') +
-        r'\s+)?(\d+)$'); // Torna a palavra 'descrição' opcional
+        r'\s+)?(\d+)$'); // Torna a palavra "descrição" opcional
     return regex.hasMatch(normalizedText);
   }
 
@@ -1072,8 +1159,8 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
         r'\s+)?(\d+)$');
 
     final match = regex.firstMatch(normalizedText);
-    if (match != null && match.groupCount >= 2) {
-      final indexStr = match.group(2);
+    if (match != null && match.groupCount >= 2) { // Precisa capturar o número
+      final indexStr = match.group(2); // O número é o segundo grupo capturado
       if (indexStr != null) {
         final index = int.tryParse(indexStr);
         if (index != null && index > 0 && index <= _orderDescriptions.length) {
@@ -1086,14 +1173,16 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
           _showOrderSummary(showButtons: false); // Mostra resumo sem botões para evitar loop
         }
       } else {
+         // Este caso não deveria ocorrer com a regex atual se houver match
         _addBotMessage(
-            'Não consegui entender qual número de descrição excluir. Use o formato: "excluir descrição [número]".');
+            'Não consegui identificar o número da descrição para excluir. Use o formato: "excluir [número]".');
          _showOrderSummary(showButtons: false);
       }
     } else {
-      _addBotMessage(
-          'Não consegui entender o comando de exclusão. Use o formato: "excluir descrição [número]".');
+      // Mensagem de erro genérica se o comando não corresponder exatamente
+       _addBotMessage(
+           'Não consegui entender o comando de exclusão. Use o formato: "excluir [número]" ou "excluir descrição [número]".');
        _showOrderSummary(showButtons: false);
     }
   }
-
+}

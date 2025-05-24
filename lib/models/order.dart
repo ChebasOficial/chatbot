@@ -51,7 +51,7 @@ class Order {
 
   // Converter String status para OrderStatus enum
   OrderStatus get orderStatus => OrderStatusExtension.fromString(status);
-
+  
   // Atualizar status a partir da enum
   set orderStatus(OrderStatus newStatus) {
     status = newStatus.value;
