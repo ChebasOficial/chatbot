@@ -19,11 +19,11 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-  
-  // Inicializar contas especiais (admin e cozinha)
-  final accountInitializer = AccountInitializer();
-  await accountInitializer.initializeSpecialAccounts();
-  
+
+  // // Inicializar contas especiais (admin e cozinha) - REMOVIDO/COMENTADO
+  // final accountInitializer = AccountInitializer();
+  // await accountInitializer.initializeSpecialAccounts();
+
   runApp(const MyApp());
 }
 

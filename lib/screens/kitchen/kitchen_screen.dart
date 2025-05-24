@@ -25,14 +25,14 @@ class _KitchenScreenState extends State<KitchenScreen> {
     // Usar stream em vez de chamada única para atualização automática
     _setupOrdersStream();
   }
-  
+
   @override
   void dispose() {
     // Cancelar a assinatura ao destruir o widget
     _ordersSubscription?.cancel();
     super.dispose();
   }
-  
+
   // Função segura para ler orderNumber (aceita int ou String)
   int _parseOrderNumber(dynamic value) {
     if (value == null) {
@@ -46,12 +46,43 @@ class _KitchenScreenState extends State<KitchenScreen> {
     }
     return 0;
   }
-  
+
   void _setupOrdersStream() {
     setState(() {
       _isLoading = true;
     });
-    
+
+    // Get auth provider instance
+    final authProvider =
+        Provider.of<ChatbotAuthProvider>(context, listen: false);
+
+    // Check if kitchen user is logged in BEFORE attempting to fetch data
+    if (!authProvider.isKitchenLoggedIn) {
+      print('Kitchen user not logged in. Aborting order fetch.');
+      if (mounted) {
+        setState(() {
+          _isLoading = false; // Stop loading indicator
+          _pendingOrders = []; // Clear any old orders
+          _selectedOrderIndex = -1;
+        });
+        // Optionally show a message
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Erro: Usuário da cozinha não está autenticado.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      // Cancel any existing subscription just in case
+      _ordersSubscription?.cancel();
+      _ordersSubscription = null;
+      return; // Stop execution if not logged in
+    }
+
+    // Proceed with fetching if logged in
+    // Cancel previous subscription if exists before creating a new one
+    _ordersSubscription?.cancel();
+
     // Configurar stream para atualização em tempo real
     _ordersSubscription = _firestore
         .collection("orders")
@@ -59,69 +90,78 @@ class _KitchenScreenState extends State<KitchenScreen> {
         .orderBy("timestamp", descending: false)
         .snapshots()
         .listen((snapshot) {
-          final orders = snapshot.docs.map((doc) {
-            final data = doc.data();
-            // Tratamento de nulos e tipos para todos os campos relevantes
-            final orderNumber = _parseOrderNumber(data['orderNumber']);
-            final userEmail = (data['userEmail'] as String?) ?? '';
-            final timestamp = data['timestamp'] as Timestamp?;
-            final itemsData = (data['items'] as List<dynamic>?) ?? [];
-            final total = (data['total'] as num?)?.toDouble() ?? 0.0;
-            final description = (data['description'] as String?) ?? '';
+      final orders = snapshot.docs.map((doc) {
+        final data = doc.data();
+        // Tratamento de nulos e tipos para todos os campos relevantes
+        final orderNumber = _parseOrderNumber(data['orderNumber']);
+        final userEmail = (data['userEmail'] as String?) ?? '';
+        final timestamp = data['timestamp'] as Timestamp?;
+        final itemsData = (data['items'] as List<dynamic>?) ?? [];
+        final total = (data['total'] as num?)?.toDouble() ?? 0.0;
+        final description = (data['description'] as String?) ?? '';
 
-            // Mapear itens com tratamento de nulos interno
-            final items = itemsData.map((itemData) {
-              final itemMap = itemData as Map<String, dynamic>? ?? {};
-              return {
-                'name': (itemMap['name'] as String?) ?? 'Item desconhecido',
-                'quantity': (itemMap['quantity'] as int?) ?? 0,
-                'price': (itemMap['price'] as num?)?.toDouble() ?? 0.0,
-              };
-            }).toList();
+        // Mapear itens com tratamento de nulos interno
+        final items = itemsData.map((itemData) {
+          final itemMap = itemData as Map<String, dynamic>? ?? {};
+          return {
+            'name': (itemMap['name'] as String?) ?? 'Item desconhecido',
+            'quantity': (itemMap['quantity'] as int?) ?? 0,
+            'price': (itemMap['price'] as num?)?.toDouble() ?? 0.0,
+          };
+        }).toList();
 
-            return {
-              'id': doc.id,
-              'orderNumber': orderNumber,
-              'userEmail': userEmail,
-              'timestamp': timestamp,
-              'items': items,
-              'total': total,
-              'description': description,
-            };
-          }).toList();
+        return {
+          'id': doc.id,
+          'orderNumber': orderNumber,
+          'userEmail': userEmail,
+          'timestamp': timestamp,
+          'items': items,
+          'total': total,
+          'description': description,
+        };
+      }).toList();
 
-          if (mounted) {
-            setState(() {
-              _pendingOrders = orders;
-              _isLoading = false;
-              // Manter o índice selecionado se possível, ou ajustar para o primeiro item
-              if (_selectedOrderIndex >= _pendingOrders.length) {
-                _selectedOrderIndex = _pendingOrders.isNotEmpty ? 0 : -1;
-              }
-            });
-          }
-        }, onError: (e) {
-          print('Erro ao carregar pedidos pendentes: $e');
-          if (mounted) {
-            setState(() {
-              _isLoading = false;
-            });
-            
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Erro ao carregar pedidos: ${e.toString()}'),
-                backgroundColor: Colors.red,
-                duration: const Duration(seconds: 10),
-                action: SnackBarAction(
-                  label: 'FECHAR',
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                  },
-                ),
-              ),
-            );
+      if (mounted) {
+        setState(() {
+          _pendingOrders = orders;
+          _isLoading = false;
+          // Lógica corrigida para selecionar o primeiro pedido se necessário
+          if (_pendingOrders.isNotEmpty) {
+            // Se há pedidos
+            if (_selectedOrderIndex < 0 ||
+                _selectedOrderIndex >= _pendingOrders.length) {
+              // Se o índice era inválido (-1) ou ficou fora dos limites, seleciona o primeiro (0)
+              _selectedOrderIndex = 0;
+            }
+            // Se o índice já era válido e continua dentro dos limites, ele é mantido
+          } else {
+            // Se não há pedidos
+            _selectedOrderIndex = -1; // Garante que o índice seja -1
           }
         });
+      }
+    }, onError: (e) {
+      print('Erro ao carregar pedidos pendentes: $e');
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erro ao carregar pedidos: ${e.toString()}'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 10),
+            action: SnackBarAction(
+              label: 'FECHAR',
+              onPressed: () {
+                ScaffoldMessenger.of(context).hideCurrentSnackBar();
+              },
+            ),
+          ),
+        );
+      }
+    });
   }
 
   // Função segura para extrair RA do email
@@ -183,7 +223,8 @@ class _KitchenScreenState extends State<KitchenScreen> {
     if (_pendingOrders.isEmpty) return;
     setState(() {
       _selectedOrderIndex = (_selectedOrderIndex - 1);
-      if (_selectedOrderIndex < 0) _selectedOrderIndex = _pendingOrders.length - 1;
+      if (_selectedOrderIndex < 0)
+        _selectedOrderIndex = _pendingOrders.length - 1;
     });
   }
 
@@ -203,12 +244,14 @@ class _KitchenScreenState extends State<KitchenScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: _setupOrdersStream, // Usar o método de stream para atualização manual também
+            onPressed:
+                _setupOrdersStream, // Usar o método de stream para atualização manual também
           ),
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () async {
-              await Provider.of<ChatbotAuthProvider>(context, listen: false).logout();
+              await Provider.of<ChatbotAuthProvider>(context, listen: false)
+                  .logout();
               Navigator.pushReplacementNamed(context, '/login');
             },
           ),
@@ -220,75 +263,20 @@ class _KitchenScreenState extends State<KitchenScreen> {
               ? const Center(
                   child: Text('Não há pedidos pendentes no momento.'),
                 )
-              : Column(
-                  children: [
-                    // Contador de pedidos pendentes
-                    Container(
-                      padding: const EdgeInsets.all(16.0),
-                      color: Colors.amber[100],
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(Icons.restaurant, color: Colors.amber),
-                          const SizedBox(width: 8.0),
-                          Text(
-                            'Pedidos pendentes: ${_pendingOrders.length}',
-                            style: const TextStyle(
-                              fontSize: 18.0,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    // Navegação entre pedidos
-                    if (_pendingOrders.isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 16.0),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            ElevatedButton.icon(
-                              onPressed: _selectPreviousOrder,
-                              icon: const Icon(Icons.arrow_back),
-                              label: const Text('Anterior'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.blue,
-                                foregroundColor: Colors.white,
-                              ),
-                            ),
-                            const SizedBox(width: 16.0),
-                            Text(
-                              'Pedido ${_selectedOrderIndex + 1} de ${_pendingOrders.length}',
-                              style: const TextStyle(
-                                fontSize: 16.0,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(width: 16.0),
-                            ElevatedButton.icon(
-                              onPressed: _selectNextOrder,
-                              icon: const Icon(Icons.arrow_forward),
-                              label: const Text('Próximo'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.blue,
-                                foregroundColor: Colors.white,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-
-                    // Detalhes do pedido selecionado
-                    if (_selectedOrderIndex >= 0 && _selectedOrderIndex < _pendingOrders.length)
-                      Expanded(
-                        child: SingleChildScrollView(
-                          padding: const EdgeInsets.all(16.0),
+              : SingleChildScrollView(
+                  // Simplificado: Remove Column e Expanded
+                  padding: const EdgeInsets.all(16.0),
+                  child: _selectedOrderIndex >= 0 &&
+                          _selectedOrderIndex < _pendingOrders.length
+                      ? Container(
+                          // <--- Envolver com Container
+                          constraints: const BoxConstraints(
+                              maxWidth: 600), // Define largura máxima
                           child: _buildSelectedOrderCard(),
-                        ),
-                      ),
-                  ],
+                        ) // Mostra o card diretamente dentro do Container
+                      : const Center(
+                          child: Text(
+                              "Nenhum pedido selecionado ou disponível.")), // Mensagem se não houver pedido
                 ),
     );
   }
@@ -297,7 +285,8 @@ class _KitchenScreenState extends State<KitchenScreen> {
     final order = _pendingOrders[_selectedOrderIndex];
 
     // Acessar dados com segurança usando valores padrão definidos no _loadPendingOrders
-    final orderNumber = order['orderNumber'] as int; // Já tratado pela função _parseOrderNumber
+    final orderNumber =
+        order['orderNumber'] as int; // Já tratado pela função _parseOrderNumber
     final timestamp = order['timestamp'] as Timestamp?;
     final dateTime = timestamp?.toDate() ?? DateTime.now();
     final formattedDate = DateFormat('dd/MM/yyyy HH:mm').format(dateTime);
@@ -306,7 +295,8 @@ class _KitchenScreenState extends State<KitchenScreen> {
     final items = order['items'] as List<Map<String, dynamic>>; // Já tratado
     final total = order['total'] as double; // Já tratado
     final description = order['description'] as String; // Já tratado
-    final formattedOrderNumber = orderNumber.toString().padLeft(3, '0'); // Formatar número
+    final formattedOrderNumber =
+        orderNumber.toString().padLeft(3, '0'); // Formatar número
 
     return Card(
       elevation: 4.0,
@@ -345,7 +335,8 @@ class _KitchenScreenState extends State<KitchenScreen> {
 
             // RA do aluno
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 6.0),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 12.0, vertical: 6.0),
               decoration: BoxDecoration(
                 color: Colors.grey[200],
                 borderRadius: BorderRadius.circular(8.0),
@@ -406,12 +397,15 @@ class _KitchenScreenState extends State<KitchenScreen> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Expanded( // Para evitar overflow se o nome for longo
+                    Flexible(
+                      // <--- Adicionar Flexible
                       child: Text(
                         '$quantity x $name',
                         style: const TextStyle(fontSize: 16.0),
+                        overflow: TextOverflow
+                            .ellipsis, // Adicionado para evitar overflow
                       ),
-                    ),
+                    ), // <--- Fechar Flexible
                     const SizedBox(width: 8),
                     Text(
                       'R\$ ${itemTotal.toStringAsFixed(2)}',
@@ -447,19 +441,23 @@ class _KitchenScreenState extends State<KitchenScreen> {
             const SizedBox(height: 24.0),
 
             // Botão de confirmar pedido
-            SizedBox(
-              width: double.infinity,
-              height: 50.0,
-              child: ElevatedButton.icon(
-                onPressed: () => _confirmOrder(_selectedOrderIndex),
-                icon: const Icon(Icons.check_circle),
-                label: const Text('CONFIRMAR PEDIDO'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green,
-                  foregroundColor: Colors.white,
+            Align(
+              // <--- Envolver com Align
+              alignment: Alignment.center, // Alinha o botão no centro
+              child: SizedBox(
+                // width: double.infinity, // Mantém comentado/removido
+                height: 50.0,
+                child: ElevatedButton.icon(
+                  onPressed: () => _confirmOrder(_selectedOrderIndex),
+                  icon: const Icon(Icons.check_circle),
+                  label: const Text('CONFIRMAR PEDIDO'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green,
+                    foregroundColor: Colors.white,
+                  ),
                 ),
               ),
-            ),
+            ), // <--- Fechar Align
           ],
         ),
       ),
