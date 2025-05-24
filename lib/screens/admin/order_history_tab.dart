@@ -13,8 +13,10 @@ class _OrderHistoryTabState extends State<OrderHistoryTab> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final TextEditingController _filterController = TextEditingController();
   bool _isLoading = false;
-  List<Map<String, dynamic>> _allOrders = []; // Lista com todos os pedidos carregados
-  List<Map<String, dynamic>> _filteredOrders = []; // Lista filtrada para exibição
+  List<Map<String, dynamic>> _allOrders =
+      []; // Lista com todos os pedidos carregados
+  List<Map<String, dynamic>> _filteredOrders =
+      []; // Lista filtrada para exibição
   String _filterText = "";
 
   @override
@@ -54,7 +56,8 @@ class _OrderHistoryTabState extends State<OrderHistoryTab> {
         return {
           'id': doc.id,
           'orderNumber': data['orderNumber'] ?? 0,
-          'userEmail': data['userEmail'] ?? 'Usuário desconhecido',
+          'userRa':
+              data['userRa'] ?? 'RA desconhecido', // CORRIGIDO: Ler userRa
           'timestamp': data['timestamp'] as Timestamp?,
           'items': data['items'] as List<dynamic>? ?? [],
           'total': (data['total'] ?? 0).toDouble(),
@@ -144,13 +147,16 @@ class _OrderHistoryTabState extends State<OrderHistoryTab> {
                           ),
                         )
                       : ListView.builder(
-                          padding: const EdgeInsets.only(left: 16.0, right: 16.0, bottom: 16.0),
+                          padding: const EdgeInsets.only(
+                              left: 16.0, right: 16.0, bottom: 16.0),
                           itemCount: _filteredOrders.length,
                           itemBuilder: (context, index) {
                             final order = _filteredOrders[index];
                             final timestamp = order['timestamp'] as Timestamp?;
-                            final dateTime = timestamp?.toDate() ?? DateTime.now();
-                            final formattedDate = DateFormat('dd/MM/yyyy HH:mm').format(dateTime);
+                            final dateTime =
+                                timestamp?.toDate() ?? DateTime.now();
+                            final formattedDate =
+                                DateFormat('dd/MM/yyyy HH:mm').format(dateTime);
                             final ra = _extractRA(order['userEmail'] as String);
                             final items = order['items'] as List<dynamic>;
                             final total = order['total'] as double;
@@ -163,7 +169,8 @@ class _OrderHistoryTabState extends State<OrderHistoryTab> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
                                       children: [
                                         Text(
                                           'Pedido #${(order['orderNumber'] as int).toString().padLeft(3, '0')}',
@@ -198,23 +205,28 @@ class _OrderHistoryTabState extends State<OrderHistoryTab> {
                                     ...items.map((item) {
                                       final name = item['name'] as String;
                                       final quantity = item['quantity'] as int;
-                                      final price = (item['price'] as num).toDouble();
+                                      final price =
+                                          (item['price'] as num).toDouble();
                                       final itemTotal = price * quantity;
 
                                       return Padding(
-                                        padding: const EdgeInsets.only(bottom: 4.0),
+                                        padding:
+                                            const EdgeInsets.only(bottom: 4.0),
                                         child: Row(
-                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.spaceBetween,
                                           children: [
                                             Text('$quantity x $name'),
-                                            Text('R\$ ${itemTotal.toStringAsFixed(2)}'),
+                                            Text(
+                                                'R\$ ${itemTotal.toStringAsFixed(2)}'),
                                           ],
                                         ),
                                       );
                                     }).toList(),
                                     const Divider(),
                                     Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
                                       children: [
                                         const Text(
                                           'Total:',
@@ -243,4 +255,3 @@ class _OrderHistoryTabState extends State<OrderHistoryTab> {
     );
   }
 }
-

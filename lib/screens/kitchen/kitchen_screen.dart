@@ -28,19 +28,16 @@ class _KitchenScreenState extends State<KitchenScreen> {
       _isLoading = true;
     });
 
-    try {
-      final snapshot = await _firestore
-          .collection('orders')
-          .where('status', isEqualTo: 'pendente')
-          .orderBy('timestamp', descending: true)
-          .get();
-
-      final orders = snapshot.docs.map((doc) {
+    try       final snapshot = await _firestore
+          .collection("orders")
+          .where("status", isEqualTo: "pending") // CORRIGIDO: status correto
+          .orderBy("timestamp", descending: true)
+          .get();   final orders = snapshot.docs.map((doc) {
         final data = doc.data();
         return {
           'id': doc.id,
           'orderNumber': data['orderNumber'] ?? 0,
-          'userEmail': data['userEmail'] ?? 'Usuário desconhecido',
+          'userRa': data['userRa'] ?? 'RA desconhecido', // CORRIGIDO: Ler userRa
           'timestamp': data['timestamp'] as Timestamp?,
           'items': data['items'] as List<dynamic>? ?? [],
           'total': (data['total'] ?? 0).toDouble(),

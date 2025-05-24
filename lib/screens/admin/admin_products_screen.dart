@@ -245,7 +245,8 @@ class _AdminProductsScreenState extends State<AdminProductsScreen> {
                                 // Informações do item
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         item.name,
@@ -278,12 +279,14 @@ class _AdminProductsScreenState extends State<AdminProductsScreen> {
                                   children: [
                                     IconButton(
                                       icon: const Icon(Icons.edit),
-                                      onPressed: () => _showAddEditDialog(item: item),
+                                      onPressed: () =>
+                                          _showAddEditDialog(item: item),
                                     ),
                                     IconButton(
                                       icon: const Icon(Icons.delete),
                                       color: Colors.red,
-                                      onPressed: () => _showDeleteConfirmation(item),
+                                      onPressed: () =>
+                                          _showDeleteConfirmation(item),
                                     ),
                                   ],
                                 ),
@@ -387,7 +390,7 @@ class _AddEditMenuItemDialogState extends State<AddEditMenuItemDialog> {
                 },
               ),
               const SizedBox(height: 16.0),
-              
+
               // Descrição
               TextFormField(
                 controller: _descriptionController,
@@ -404,7 +407,7 @@ class _AddEditMenuItemDialogState extends State<AddEditMenuItemDialog> {
                 },
               ),
               const SizedBox(height: 16.0),
-              
+
               // Preço
               TextFormField(
                 controller: _priceController,
@@ -417,12 +420,12 @@ class _AddEditMenuItemDialogState extends State<AddEditMenuItemDialog> {
                   if (value == null || value.isEmpty) {
                     return 'Por favor, informe o preço do item';
                   }
-                  
+
                   final price = double.tryParse(value);
                   if (price == null || price <= 0) {
                     return 'Por favor, informe um preço válido';
                   }
-                  
+
                   return null;
                 },
               ),

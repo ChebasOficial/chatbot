@@ -6,24 +6,24 @@ import 'dart:async';
 
 class MenuProvider extends ChangeNotifier {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  
+
   List<MenuItem> _menuItems = [];
   bool _isLoading = false;
   String? _error;
-  
+
   List<MenuItem> get menuItems => _menuItems;
   bool get isLoading => _isLoading;
   String? get error => _error;
-  
+
   // Carregar itens do cardápio
   Future<void> loadMenuItems() async {
     _isLoading = true;
     _error = null;
     notifyListeners();
-    
+
     try {
       final snapshot = await _firestore.collection('menu_items').get();
-      
+
       final items = snapshot.docs.map((doc) {
         final data = doc.data();
         return MenuItem(
@@ -35,7 +35,7 @@ class MenuProvider extends ChangeNotifier {
           quantity: data['quantity'] ?? 0,
         );
       }).toList();
-      
+
       _menuItems = items;
       _isLoading = false;
       notifyListeners();
@@ -46,13 +46,13 @@ class MenuProvider extends ChangeNotifier {
       notifyListeners();
     }
   }
-  
+
   // Adicionar item ao cardápio
   Future<MenuItem?> addMenuItem(MenuItem item) async {
     _isLoading = true;
     _error = null;
     notifyListeners();
-    
+
     try {
       final docRef = await _firestore.collection('menu_items').add({
         'name': item.name,
@@ -62,7 +62,7 @@ class MenuProvider extends ChangeNotifier {
         'quantity': item.quantity,
         'createdAt': FieldValue.serverTimestamp(),
       });
-      
+
       final newItem = MenuItem(
         id: docRef.id,
         name: item.name,
@@ -71,11 +71,11 @@ class MenuProvider extends ChangeNotifier {
         imageUrl: item.imageUrl,
         quantity: item.quantity,
       );
-      
+
       _menuItems.add(newItem);
       _isLoading = false;
       notifyListeners();
-      
+
       return newItem;
     } catch (e) {
       print('Erro ao adicionar item ao cardápio: $e');
@@ -85,13 +85,13 @@ class MenuProvider extends ChangeNotifier {
       return null;
     }
   }
-  
+
   // Atualizar item do cardápio
   Future<bool> updateMenuItem(MenuItem item) async {
     _isLoading = true;
     _error = null;
     notifyListeners();
-    
+
     try {
       await _firestore.collection('menu_items').doc(item.id).update({
         'name': item.name,
@@ -101,15 +101,15 @@ class MenuProvider extends ChangeNotifier {
         'quantity': item.quantity,
         'updatedAt': FieldValue.serverTimestamp(),
       });
-      
+
       final index = _menuItems.indexWhere((i) => i.id == item.id);
       if (index >= 0) {
         _menuItems[index] = item;
       }
-      
+
       _isLoading = false;
       notifyListeners();
-      
+
       return true;
     } catch (e) {
       print('Erro ao atualizar item do cardápio: $e');
@@ -119,20 +119,20 @@ class MenuProvider extends ChangeNotifier {
       return false;
     }
   }
-  
+
   // Remover item do cardápio
   Future<bool> deleteMenuItem(String id) async {
     _isLoading = true;
     _error = null;
     notifyListeners();
-    
+
     try {
       await _firestore.collection('menu_items').doc(id).delete();
-      
+
       _menuItems.removeWhere((item) => item.id == id);
       _isLoading = false;
       notifyListeners();
-      
+
       return true;
     } catch (e) {
       print('Erro ao remover item do cardápio: $e');
@@ -142,7 +142,7 @@ class MenuProvider extends ChangeNotifier {
       return false;
     }
   }
-  
+
   // Atualizar quantidade de um item
   Future<bool> updateItemQuantity(String id, int quantity) async {
     try {
@@ -150,7 +150,7 @@ class MenuProvider extends ChangeNotifier {
         'quantity': quantity,
         'updatedAt': FieldValue.serverTimestamp(),
       });
-      
+
       final index = _menuItems.indexWhere((i) => i.id == id);
       if (index >= 0) {
         final item = _menuItems[index];
@@ -164,7 +164,7 @@ class MenuProvider extends ChangeNotifier {
         );
         notifyListeners();
       }
-      
+
       return true;
     } catch (e) {
       print('Erro ao atualizar quantidade do item: $e');

@@ -14,11 +14,12 @@ class _InicioScreenState extends State<InicioScreen> {
   @override
   void initState() {
     super.initState();
-    
+
     // Verificar autenticação e redirecionar para a tela apropriada
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final authProvider = Provider.of<ChatbotAuthProvider>(context, listen: false);
-      
+      final authProvider =
+          Provider.of<ChatbotAuthProvider>(context, listen: false);
+
       if (authProvider.isLoggedIn) {
         if (authProvider.isAdminLoggedIn) {
           // Se for admin, ir para a tela de gerenciamento
@@ -38,7 +39,8 @@ class _InicioScreenState extends State<InicioScreen> {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        title: const Text('Poliedro Food', style: TextStyle(color: Colors.black)),
+        title:
+            const Text('Poliedro Food', style: TextStyle(color: Colors.black)),
         // Removido o botão de login do canto superior
       ),
       body: SafeArea(
@@ -86,13 +88,15 @@ class _InicioScreenState extends State<InicioScreen> {
                             ),
                             child: const Text(
                               'Gerenciar Produtos',
-                              style: TextStyle(fontSize: 18, color: Colors.white),
+                              style:
+                                  TextStyle(fontSize: 18, color: Colors.white),
                             ),
                           );
                         } else {
                           return ElevatedButton(
                             onPressed: () {
-                              Navigator.pushReplacementNamed(context, '/chatbot');
+                              Navigator.pushReplacementNamed(
+                                  context, '/chatbot');
                             },
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.teal,
@@ -103,7 +107,8 @@ class _InicioScreenState extends State<InicioScreen> {
                             ),
                             child: const Text(
                               'Acessar Chatbot',
-                              style: TextStyle(fontSize: 18, color: Colors.white),
+                              style:
+                                  TextStyle(fontSize: 18, color: Colors.white),
                             ),
                           );
                         }

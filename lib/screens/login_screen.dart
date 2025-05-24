@@ -37,7 +37,8 @@ class _LoginScreenState extends State<LoginScreen> {
     super.initState();
     // Verificar se o usuário já está logado
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final authProvider = Provider.of<ChatbotAuthProvider>(context, listen: false);
+      final authProvider =
+          Provider.of<ChatbotAuthProvider>(context, listen: false);
       if (authProvider.isLoggedIn && !authProvider.isAdminLoggedIn) {
         Navigator.pushReplacementNamed(context, '/cardapio');
       }
@@ -58,7 +59,7 @@ class _LoginScreenState extends State<LoginScreen> {
       _errorMessage = null;
       _infoMessage = null;
     });
-    
+
     // Verificar se o RA está no formato correto
     final raRegex = RegExp(r'^\d{8}@p4ed\.com\.br$');
     if (raRegex.hasMatch(value.trim())) {
@@ -75,13 +76,13 @@ class _LoginScreenState extends State<LoginScreen> {
   // Verificar se é o primeiro login do usuário
   Future<void> _checkIfFirstLogin() async {
     if (_raController.text.isEmpty) return;
-    
+
     setState(() {
       _isCheckingFirstLogin = true;
       _errorMessage = null;
       _infoMessage = null;
     });
-    
+
     try {
       // Validar formato do RA antes de verificar
       final raRegex = RegExp(r'^\d{8}@p4ed\.com\.br$');
@@ -92,11 +93,11 @@ class _LoginScreenState extends State<LoginScreen> {
         });
         return;
       }
-      
+
       // Verificar no armazenamento local primeiro
       final prefs = await SharedPreferences.getInstance();
       final storedEmail = prefs.getString('user_email');
-      
+
       if (storedEmail == _raController.text.trim()) {
         // Usuário já existe localmente
         setState(() {
@@ -105,7 +106,7 @@ class _LoginScreenState extends State<LoginScreen> {
         });
         return;
       }
-      
+
       try {
         // Buscar usuário pelo email no Firestore
         final querySnapshot = await FirebaseFirestore.instance
@@ -113,31 +114,31 @@ class _LoginScreenState extends State<LoginScreen> {
             .where('ra', isEqualTo: _raController.text.trim())
             .limit(1)
             .get();
-        
+
         final isFirstLogin = querySnapshot.docs.isEmpty;
-        
+
         if (!isFirstLogin) {
           // Usuário já existe, recuperar o telefone
           final userData = querySnapshot.docs.first.data();
           final phone = userData['phone'] as String?;
-          
+
           if (phone != null && phone.isNotEmpty) {
             // Preencher o campo de telefone automaticamente
             _phoneController.text = phone;
-            
+
             // Salvar localmente para uso futuro
             final prefs = await SharedPreferences.getInstance();
             await prefs.setString('user_email', _raController.text.trim());
             await prefs.setString('user_phone', phone);
-            
+
             print('Telefone recuperado do Firestore: $phone');
           }
         }
-        
+
         setState(() {
           _isFirstLogin = isFirstLogin;
           _isCheckingFirstLogin = false;
-          
+
           // Mostrar mensagem informativa se for primeiro login
           if (isFirstLogin) {
             _infoMessage = 'Por favor, informe seu telefone para continuar.';
@@ -149,7 +150,7 @@ class _LoginScreenState extends State<LoginScreen> {
       } catch (firestoreError) {
         // Tratar erros específicos do Firestore de forma amigável
         print('Erro do Firestore: $firestoreError');
-        
+
         // Assumir que é primeiro login para permitir que o usuário continue
         setState(() {
           _isFirstLogin = true;
@@ -160,7 +161,8 @@ class _LoginScreenState extends State<LoginScreen> {
     } catch (e) {
       print('Erro geral ao verificar primeiro login: $e');
       setState(() {
-        _isFirstLogin = true; // Em caso de erro, assumir primeiro login para pedir telefone
+        _isFirstLogin =
+            true; // Em caso de erro, assumir primeiro login para pedir telefone
         _isCheckingFirstLogin = false;
         _infoMessage = 'Por favor, informe seu telefone para continuar.';
       });
@@ -184,21 +186,22 @@ class _LoginScreenState extends State<LoginScreen> {
           });
           return;
         }
-        
-        final authProvider = Provider.of<ChatbotAuthProvider>(context, listen: false);
-        
+
+        final authProvider =
+            Provider.of<ChatbotAuthProvider>(context, listen: false);
+
         // Criar objeto de usuário com os dados informados
         final user = User(
           ra: _raController.text.trim(),
           phone: _phoneController.text.trim(),
         );
-        
+
         // Tentar fazer login
         await authProvider.login(user);
 
         // Se chegou aqui, login foi bem-sucedido
         if (!mounted) return;
-        
+
         // Mostrar mensagem de sucesso
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -206,7 +209,7 @@ class _LoginScreenState extends State<LoginScreen> {
             backgroundColor: Colors.green,
           ),
         );
-        
+
         // Navegar para o cardápio imediatamente após login bem-sucedido
         Navigator.pushNamedAndRemoveUntil(
           context,
@@ -216,10 +219,11 @@ class _LoginScreenState extends State<LoginScreen> {
       } catch (e) {
         print('Erro durante login na tela: $e');
         if (!mounted) return;
-        
+
         // Tratar mensagens de erro de forma amigável
-        String errorMessage = 'Não foi possível fazer login. Verifique sua conexão com a internet.';
-        
+        String errorMessage =
+            'Não foi possível fazer login. Verifique sua conexão com a internet.';
+
         // Personalizar mensagens para erros específicos
         if (e.toString().contains('R.A. inválido')) {
           errorMessage = 'R.A. inválido. Use o formato: 12345678@p4ed.com.br';
@@ -227,37 +231,50 @@ class _LoginScreenState extends State<LoginScreen> {
           errorMessage = 'Telefone inválido. Use o formato: (11) 98765-4321';
         } else if (e.toString().contains('Telefone é obrigatório')) {
           errorMessage = 'Por favor, informe seu telefone para continuar.';
-        } else if (e.toString().contains('permission-denied') || e.toString().contains('Erro de permissão')) {
-          errorMessage = 'Erro de permissão ao acessar o banco de dados. Verifique as regras de segurança.';
-        } else if (e.toString().contains('network') || e.toString().contains('Sem conexão')) {
-          errorMessage = 'Sem conexão com a internet. O login requer conexão ativa.';
-        } else if (e.toString().contains('wrong-password') || e.toString().contains('invalid-credential') || e.toString().contains('Senha incorreta')) {
-          errorMessage = 'Senha incorreta. Verifique se o telefone está correto.';
+        } else if (e.toString().contains('permission-denied') ||
+            e.toString().contains('Erro de permissão')) {
+          errorMessage =
+              'Erro de permissão ao acessar o banco de dados. Verifique as regras de segurança.';
+        } else if (e.toString().contains('network') ||
+            e.toString().contains('Sem conexão')) {
+          errorMessage =
+              'Sem conexão com a internet. O login requer conexão ativa.';
+        } else if (e.toString().contains('wrong-password') ||
+            e.toString().contains('invalid-credential') ||
+            e.toString().contains('Senha incorreta')) {
+          errorMessage =
+              'Senha incorreta. Verifique se o telefone está correto.';
         } else if (e.toString().contains('Erro de autenticação')) {
-          errorMessage = 'Erro de autenticação. Verifique sua conexão e tente novamente.';
+          errorMessage =
+              'Erro de autenticação. Verifique sua conexão e tente novamente.';
         } else if (e.toString().contains('Por favor, informe o telefone')) {
           errorMessage = 'Por favor, informe o telefone para fazer login.';
         } else if (e.toString().contains('Erro ao verificar existência')) {
-          errorMessage = 'Erro ao verificar usuário. Verifique sua conexão com a internet.';
-        } else if (e.toString().contains('GooglePlayServicesNotAvailableException')) {
-          errorMessage = 'Google Play Services não disponível. Verifique se está instalado e atualizado.';
+          errorMessage =
+              'Erro ao verificar usuário. Verifique sua conexão com a internet.';
+        } else if (e
+            .toString()
+            .contains('GooglePlayServicesNotAvailableException')) {
+          errorMessage =
+              'Google Play Services não disponível. Verifique se está instalado e atualizado.';
         } else if (e.toString().contains('email-already-in-use')) {
           // Tentar fazer login diretamente se o email já existe
           try {
-            final authProvider = Provider.of<ChatbotAuthProvider>(context, listen: false);
-            
+            final authProvider =
+                Provider.of<ChatbotAuthProvider>(context, listen: false);
+
             // Criar objeto de usuário com os dados informados
             final user = User(
               ra: _raController.text.trim(),
               phone: _phoneController.text.trim(),
             );
-            
+
             // Tentar fazer login novamente (agora o provider vai tentar login direto)
             await authProvider.login(user);
-            
+
             // Se chegou aqui, login foi bem-sucedido
             if (!mounted) return;
-            
+
             // Mostrar mensagem de sucesso
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
@@ -265,22 +282,25 @@ class _LoginScreenState extends State<LoginScreen> {
                 backgroundColor: Colors.green,
               ),
             );
-            
+
             // Navegar para o cardápio imediatamente após login bem-sucedido
             Navigator.pushNamedAndRemoveUntil(
               context,
               '/cardapio',
-              ModalRoute.withName('/'), // Mantém apenas a rota inicial (/) na pilha
+              ModalRoute.withName(
+                  '/'), // Mantém apenas a rota inicial (/) na pilha
             );
-            
+
             // Retornar para evitar mostrar mensagem de erro
             return;
           } catch (loginError) {
-            print('Erro ao tentar login após email-already-in-use: $loginError');
-            errorMessage = 'Este email já está em uso. Verifique se o telefone está correto.';
+            print(
+                'Erro ao tentar login após email-already-in-use: $loginError');
+            errorMessage =
+                'Este email já está em uso. Verifique se o telefone está correto.';
           }
         }
-        
+
         // Atualizar estado com mensagem de erro amigável
         setState(() {
           _errorMessage = errorMessage;
@@ -328,7 +348,8 @@ class _LoginScreenState extends State<LoginScreen> {
         body: SafeArea(
           child: Center(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 40.0, vertical: 20.0),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 40.0, vertical: 20.0),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -340,13 +361,14 @@ class _LoginScreenState extends State<LoginScreen> {
                       SizedBox(height: 10),
                       Text(
                         'Login',
-                        style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                            fontSize: 24, fontWeight: FontWeight.bold),
                       ),
                     ],
                   ),
-                  
+
                   const SizedBox(height: 40),
-                  
+
                   // Formulário de login
                   Card(
                     elevation: 4,
@@ -374,7 +396,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               textAlign: TextAlign.center,
                             ),
                             const SizedBox(height: 24),
-                            
+
                             // Campo de R.A.
                             CustomTextField(
                               controller: _raController,
@@ -386,7 +408,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               onChanged: _onRAChanged,
                             ),
                             const SizedBox(height: 16),
-                            
+
                             // Indicador de carregamento durante verificação
                             if (_isCheckingFirstLogin)
                               const Center(
@@ -401,11 +423,12 @@ class _LoginScreenState extends State<LoginScreen> {
                                   ),
                                 ),
                               ),
-                            
+
                             // Mensagem informativa
                             if (_infoMessage != null && !_isCheckingFirstLogin)
                               Padding(
-                                padding: const EdgeInsets.only(top: 8.0, bottom: 8.0),
+                                padding: const EdgeInsets.only(
+                                    top: 8.0, bottom: 8.0),
                                 child: Text(
                                   _infoMessage!,
                                   style: TextStyle(
@@ -415,7 +438,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                   textAlign: TextAlign.center,
                                 ),
                               ),
-                            
+
                             // Campo de telefone (visível automaticamente no primeiro login)
                             if (_isFirstLogin && !_isCheckingFirstLogin)
                               Column(
@@ -443,7 +466,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                   ),
                                 ],
                               ),
-                            
+
                             // Mensagem de erro
                             if (_errorMessage != null)
                               Padding(
@@ -457,9 +480,9 @@ class _LoginScreenState extends State<LoginScreen> {
                                   textAlign: TextAlign.center,
                                 ),
                               ),
-                            
+
                             const SizedBox(height: 24),
-                            
+
                             // Botão de login
                             CustomButton(
                               text: 'Continuar',
@@ -467,7 +490,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               onPressed: _login,
                             ),
                             const SizedBox(height: 16),
-                            
+
                             // Link para login administrativo
                             TextButton(
                               onPressed: () {
@@ -485,9 +508,9 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                   ),
-                  
+
                   const SizedBox(height: 40),
-                  
+
                   // Bottom Logo
                   Column(children: [
                     // Placeholder for Poliedro Colégio Logo
