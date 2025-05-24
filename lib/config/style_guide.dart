@@ -19,10 +19,13 @@ class PoliedroFoodStyle {
   static const Color warning = Color(0xFFFFA000);
   static const Color info = Color(0xFF1E88E5);
   static const Color priceColor = Color(0xFF333333); // Cor neutra para preços
-  static const Color orderIdColor = Color(0xFF333333); // Cor neutra para IDs de pedido
+  static const Color orderIdColor =
+      Color(0xFF333333); // Cor neutra para IDs de pedido
   static const Color totalColor = Color(0xFF333333); // Cor neutra para totais
-  static const Color neutralDark = Color(0xFF333333); // Adicionado - cor neutra para substituir cores fortes
-  static const Color primaryColor = primaryBlue; // Adicionado - alias para primaryBlue
+  static const Color neutralDark =
+      Color(0xFF333333); // Adicionado - cor neutra para substituir cores fortes
+  static const Color primaryColor =
+      primaryBlue; // Adicionado - alias para primaryBlue
 
   // Gradientes
   static final LinearGradient mainGradient = LinearGradient(
@@ -157,7 +160,7 @@ class PoliedroFoodStyle {
     color: orderIdColor,
     height: 1.2,
   );
-  
+
   // Estilo para legendas e rodapés
   static const TextStyle caption = TextStyle(
     fontSize: 12,
@@ -213,8 +216,8 @@ class PoliedroFoodStyle {
   static InputDecoration inputDecoration({
     String? labelText,
     String? hintText,
-    IconData? prefixIcon,  // Alterado para IconData em vez de Icon
-    IconData? suffixIcon,  // Alterado para IconData em vez de Icon
+    IconData? prefixIcon, // Alterado para IconData em vez de Icon
+    IconData? suffixIcon, // Alterado para IconData em vez de Icon
     VoidCallback? onSuffixIconPressed,
   }) {
     return InputDecoration(
@@ -243,7 +246,8 @@ class PoliedroFoodStyle {
         borderRadius: BorderRadius.circular(radiusM),
         borderSide: const BorderSide(color: error),
       ),
-      prefixIcon: prefixIcon != null ? Icon(prefixIcon, color: textLight) : null,
+      prefixIcon:
+          prefixIcon != null ? Icon(prefixIcon, color: textLight) : null,
       suffixIcon: suffixIcon != null
           ? IconButton(
               icon: Icon(suffixIcon, color: textLight),
@@ -266,7 +270,7 @@ class PoliedroFoodStyle {
     borderRadius: BorderRadius.circular(radiusM),
     boxShadow: shadowSmall,
   );
-  
+
   // Decoração para containers com gradiente
   static BoxDecoration gradientContainerDecoration = BoxDecoration(
     gradient: mainGradient,

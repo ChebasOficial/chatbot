@@ -4,11 +4,12 @@ class PoliedroTheme {
   // Cores principais do Poliedro baseadas no site
   static const Color poliedroGreen = Color(0xFF00A651);
   static const Color poliedroBlue = Color(0xFF0071BC);
-  static const Color poliedroLightBlue = Color(0xFF00A0E3); // Azul claro do Poliedro
+  static const Color poliedroLightBlue =
+      Color(0xFF00A0E3); // Azul claro do Poliedro
   static const Color poliedroOrange = Color(0xFFF7941D);
   static const Color poliedroPurple = Color(0xFF662D91);
   static const Color poliedroRed = Color(0xFFED1C24);
-  
+
   // Cor primária e variações
   static const MaterialColor primarySwatch = MaterialColor(
     0xFF00A0E3, // Azul claro Poliedro como cor primária

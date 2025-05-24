@@ -45,10 +45,10 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
     // Adicionar um pequeno atraso para garantir que o widget esteja completamente montado
     Future.delayed(const Duration(milliseconds: 300), () {
       if (!mounted) return;
-
+      
       setState(() {
         _isLoading = false;
-
+        
         // Adicionar mensagens iniciais apenas se a lista estiver vazia
         if (_messages.isEmpty) {
           _messages.add(
@@ -65,11 +65,11 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
               timestamp: DateTime.now(),
             ),
           );
-
+          
           _isInitialized = true;
         }
       });
-
+      
       // Carregar o menu
       _loadMenu();
     });
@@ -79,9 +79,9 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
     try {
       final menuProvider = Provider.of<MenuProvider>(context, listen: false);
       await menuProvider.loadMenuItems();
-
+      
       if (!mounted) return;
-
+      
       // Verificar se o menu foi carregado com sucesso
       if (menuProvider.menuItems.isNotEmpty) {
         setState(() {
@@ -90,15 +90,13 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
         });
       } else {
         // Adicionar mensagem de erro se o menu estiver vazio
-        _addBotMessage(
-            'Desculpe, não consegui carregar o cardápio. Por favor, tente novamente mais tarde.');
+        _addBotMessage('Desculpe, não consegui carregar o cardápio. Por favor, tente novamente mais tarde.');
       }
     } catch (e) {
       if (!mounted) return;
-
+      
       // Adicionar mensagem de erro em caso de exceção
-      _addBotMessage(
-          'Desculpe, ocorreu um erro ao carregar o cardápio. Por favor, tente novamente mais tarde.');
+      _addBotMessage('Desculpe, ocorreu um erro ao carregar o cardápio. Por favor, tente novamente mais tarde.');
       print('Erro ao carregar menu: $e');
     }
   }
@@ -107,22 +105,21 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
     final buffer = StringBuffer();
     buffer.writeln('Cardápio:');
     buffer.writeln();
-
+    
     for (var item in menuItems) {
       buffer.writeln('${item.name} - R\$ ${item.price.toStringAsFixed(2)}');
       buffer.writeln(item.description);
       buffer.writeln();
     }
-
-    buffer.writeln(
-        'Para pedir, digite o nome do item e a quantidade. Por exemplo: "2 hambúrgueres" ou "quero um suco de laranja"');
-
+    
+    buffer.writeln('Para pedir, digite o nome do item e a quantidade. Por exemplo: "2 hambúrgueres" ou "quero um suco de laranja"');
+    
     return buffer.toString();
   }
 
   void _addBotMessage(String text) {
     if (!mounted) return;
-
+    
     setState(() {
       _messages.add(
         ChatMessage(
@@ -132,13 +129,13 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
         ),
       );
     });
-
+    
     _scrollToBottom();
   }
 
   void _addUserMessage(String text) {
     if (!mounted) return;
-
+    
     setState(() {
       _messages.add(
         ChatMessage(
@@ -148,7 +145,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
         ),
       );
     });
-
+    
     _scrollToBottom();
   }
 
@@ -172,10 +169,10 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
   void _handleSendMessage() {
     final text = _messageController.text.trim();
     if (text.isEmpty) return;
-
+    
     _addUserMessage(text);
     _messageController.clear();
-
+    
     // Processar a mensagem do usuário
     _processUserMessage(text);
   }
@@ -186,38 +183,38 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
       _loadMenu();
       return;
     }
-
+    
     // Verificar se é um comando para adicionar descrição ao pedido
     if (_isAddDescriptionCommand(text)) {
       _addOrderDescription(text);
       return;
     }
-
+    
     // Verificar se é um comando para confirmar o pedido
     if (_isConfirmOrderCommand(text)) {
       _confirmOrder();
       return;
     }
-
+    
     // Verificar se é um comando para cancelar o pedido
     if (_isCancelOrderCommand(text)) {
       _cancelOrder();
       return;
     }
-
+    
     // Verificar se é um comando para sair/logout
     if (_isLogoutCommand(text)) {
       _showLogoutConfirmation();
       return;
     }
-
+    
     // Tentar identificar um pedido
     final orderItems = _identifyOrderItems(text);
     if (orderItems.isNotEmpty) {
       _addToCart(orderItems);
       return;
     }
-
+    
     // Se chegou aqui, não entendeu o comando
     _addBotMessage('Desculpe, não entendi. Você pode:');
     _addBotMessage('Escolha uma opção:');
@@ -225,102 +222,98 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
 
   bool _isViewMenuCommand(String text) {
     final lowerText = text.toLowerCase();
-    return lowerText.contains('cardápio') ||
-        lowerText.contains('cardapio') ||
-        lowerText.contains('menu') ||
-        lowerText.contains('ver opções') ||
-        lowerText.contains('ver opcoes');
+    return lowerText.contains('cardápio') || 
+           lowerText.contains('cardapio') || 
+           lowerText.contains('menu') || 
+           lowerText.contains('ver opções') || 
+           lowerText.contains('ver opcoes');
   }
 
   bool _isAddDescriptionCommand(String text) {
     if (_cart.isEmpty) return false;
-
+    
     final lowerText = text.toLowerCase();
-    return lowerText.contains('observação') ||
-        lowerText.contains('observacao') ||
-        lowerText.contains('descrição') ||
-        lowerText.contains('descricao') ||
-        lowerText.contains('nota') ||
-        lowerText.contains('com ') ||
-        lowerText.contains('sem ');
+    return lowerText.contains('observação') || 
+           lowerText.contains('observacao') || 
+           lowerText.contains('descrição') || 
+           lowerText.contains('descricao') || 
+           lowerText.contains('nota') || 
+           lowerText.contains('com ') || 
+           lowerText.contains('sem ');
   }
 
   bool _isConfirmOrderCommand(String text) {
     if (_cart.isEmpty) return false;
-
+    
     final lowerText = text.toLowerCase();
-    return lowerText.contains('confirmar') ||
-        lowerText.contains('finalizar') ||
-        lowerText.contains('concluir') ||
-        lowerText.contains('fechar') ||
-        lowerText.contains('pronto');
+    return lowerText.contains('confirmar') || 
+           lowerText.contains('finalizar') || 
+           lowerText.contains('concluir') || 
+           lowerText.contains('fechar') || 
+           lowerText.contains('pronto');
   }
-
+  
   bool _isCancelOrderCommand(String text) {
     if (_cart.isEmpty) return false;
-
+    
     final lowerText = text.toLowerCase();
-    return lowerText.contains('cancelar') ||
-        lowerText.contains('limpar') ||
-        lowerText.contains('esvaziar') ||
-        lowerText.contains('remover tudo');
+    return lowerText.contains('cancelar') || 
+           lowerText.contains('limpar') || 
+           lowerText.contains('esvaziar') || 
+           lowerText.contains('remover tudo');
   }
-
+  
   void _cancelOrder() {
     setState(() {
       _cart.clear();
       _orderDescription = '';
     });
-
+    
     _addBotMessage('Seu pedido foi cancelado. O carrinho está vazio.');
     _addBotMessage('O que você gostaria de pedir hoje?');
   }
 
   bool _isLogoutCommand(String text) {
     final lowerText = text.toLowerCase();
-    return lowerText.contains('sair') ||
-        lowerText.contains('logout') ||
-        lowerText.contains('deslogar') ||
-        lowerText.contains('encerrar');
+    return lowerText.contains('sair') || 
+           lowerText.contains('logout') || 
+           lowerText.contains('deslogar') || 
+           lowerText.contains('encerrar');
   }
 
   List<PoliedroOrderItem> _identifyOrderItems(String text) {
     final menuProvider = Provider.of<MenuProvider>(context, listen: false);
     final menuItems = menuProvider.menuItems;
     final List<PoliedroOrderItem> result = [];
-
+    
     // Normalizar o texto para facilitar a comparação
     String normalizedText = _normalizeText(text);
-
+    
     // Imprimir para debug
     print('Texto normalizado para identificação: "$normalizedText"');
-    print(
-        'Itens disponíveis no menu: ${menuItems.map((item) => item.name).toList()}');
-
+    print('Itens disponíveis no menu: ${menuItems.map((item) => item.name).toList()}');
+    
     // Verificar explicitamente por "pao", "pão", "paes", "pães" ou "paos" antes de processar outros itens
-    if (normalizedText.contains("pao") ||
-        normalizedText.contains("pão") ||
-        normalizedText.contains("paes") ||
-        normalizedText.contains("pães") ||
+    if (normalizedText.contains("pao") || normalizedText.contains("pão") || 
+        normalizedText.contains("paes") || normalizedText.contains("pães") || 
         normalizedText.contains("paos")) {
+      
       // Buscar o item "pao" no menu
       MenuItem? paoItem;
       try {
         paoItem = menuItems.firstWhere(
-          (item) =>
-              _normalizeText(item.name) == "pao" ||
-              _normalizeText(item.name) == "pão",
+          (item) => _normalizeText(item.name) == "pao" || _normalizeText(item.name) == "pão",
         );
         print('Item "pão" encontrado no menu: ${paoItem.name}');
       } catch (e) {
         // Item não encontrado, continuar com o processamento normal
         print('Item "pão" não encontrado no menu: $e');
       }
-
+      
       if (paoItem != null) {
         // Extrair quantidade - verificar todas as variações possíveis
         int quantity = 0;
-
+        
         // Verificar todas as variações possíveis
         for (var form in ["pao", "pão", "paes", "pães", "paos"]) {
           if (normalizedText.contains(form)) {
@@ -332,90 +325,88 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
             }
           }
         }
-
+        
         // Se não encontrou quantidade, usar 1 como padrão
         if (quantity <= 0) {
           quantity = 1;
           print('Usando quantidade padrão: 1');
         }
-
+        
         result.add(PoliedroOrderItem(
           menuItem: paoItem,
           quantity: quantity,
         ));
-
+        
         print('Adicionado ao carrinho: ${quantity}x ${paoItem.name}');
-
+        
         // Remover o item encontrado do texto para evitar duplicações
         normalizedText = normalizedText
-            .replaceAll("paes", "")
-            .replaceAll("pães", "")
-            .replaceAll("paos", "")
-            .replaceAll("pao", "")
-            .replaceAll("pão", "");
+          .replaceAll("paes", "")
+          .replaceAll("pães", "")
+          .replaceAll("paos", "")
+          .replaceAll("pao", "")
+          .replaceAll("pão", "");
       }
     }
-
+    
     // Extrair quantidade e nome do item para os demais itens
     for (var menuItem in menuItems) {
       // Normalizar o nome do item para facilitar a comparação
       String normalizedItemName = _normalizeText(menuItem.name);
-
+      
       // Pular "pao" se já processamos "paes"
-      if ((normalizedItemName == "pao" || normalizedItemName == "pão") &&
-          result.any((item) =>
-              _normalizeText(item.menuItem.name) == normalizedItemName)) {
+      if ((normalizedItemName == "pao" || normalizedItemName == "pão") && 
+          result.any((item) => _normalizeText(item.menuItem.name) == normalizedItemName)) {
         continue;
       }
-
+      
       // Verificar plurais irregulares
       List<String> possibleForms = _getPossibleForms(normalizedItemName);
       print('Formas possíveis para "$normalizedItemName": $possibleForms');
-
+      
       for (var form in possibleForms) {
         if (normalizedText.contains(form)) {
           // Encontrou um item do menu
           int quantity = _extractQuantity(normalizedText, form);
           print('Item encontrado: "$form", quantidade: $quantity');
-
+          
           result.add(PoliedroOrderItem(
             menuItem: menuItem,
             quantity: quantity,
           ));
-
+          
           // Remover o item encontrado do texto para evitar duplicações
           normalizedText = normalizedText.replaceAll(form, "");
           break;
         }
       }
     }
-
+    
     return result;
   }
 
   String _normalizeText(String text) {
     // Remover acentos e converter para minúsculas
-    String normalized = text
-        .toLowerCase()
-        .replaceAll('á', 'a')
-        .replaceAll('à', 'a')
-        .replaceAll('â', 'a')
-        .replaceAll('ã', 'a')
-        .replaceAll('é', 'e')
-        .replaceAll('ê', 'e')
-        .replaceAll('í', 'i')
-        .replaceAll('ó', 'o')
-        .replaceAll('ô', 'o')
-        .replaceAll('õ', 'o')
-        .replaceAll('ú', 'u')
-        .replaceAll('ç', 'c');
-
+    String normalized = text.toLowerCase()
+      .replaceAll('á', 'a')
+      .replaceAll('à', 'a')
+      .replaceAll('â', 'a')
+      .replaceAll('ã', 'a')
+      .replaceAll('é', 'e')
+      .replaceAll('ê', 'e')
+      .replaceAll('í', 'i')
+      .replaceAll('ó', 'o')
+      .replaceAll('ô', 'o')
+      .replaceAll('õ', 'o')
+      .replaceAll('ú', 'u')
+      .replaceAll('ç', 'c');
+    
     return normalized;
   }
 
   List<String> _getPossibleForms(String itemName) {
     List<String> forms = [itemName];
-
+    
     // Adicionar formas plurais comuns
     if (itemName.endsWith('ao')) {
       // pão -> pães, pao -> paes
@@ -436,7 +427,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
       // Plural regular
       forms.add(itemName + 's');
     }
-
+    
     // Casos específicos com tratamento especial
     if (itemName == 'pao' || itemName == 'pão') {
       forms.clear(); // Limpar para evitar duplicações
@@ -446,14 +437,14 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
       forms.add('pães');
       forms.add('paos'); // Adicionando variação comum
     }
-
+    
     return forms;
   }
 
   int _extractQuantity(String text, String itemName) {
     // Imprimir para debug
     print('Extraindo quantidade para "$itemName" do texto: "$text"');
-
+    
     // Padrão: número seguido do nome do item
     RegExp regExp = RegExp(r'(\d+)\s*' + itemName);
     var match = regExp.firstMatch(text);
@@ -462,32 +453,22 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
       print('Quantidade encontrada via regex: $quantity');
       return quantity;
     }
-
+    
     // Verificar números por extenso
     Map<String, int> numberWords = {
-      'um': 1,
-      'uma': 1,
-      'dois': 2,
-      'duas': 2,
-      'tres': 3,
-      'três': 3,
-      'quatro': 4,
-      'cinco': 5,
-      'seis': 6,
-      'sete': 7,
-      'oito': 8,
-      'nove': 9,
-      'dez': 10
+      'um': 1, 'uma': 1, 'dois': 2, 'duas': 2, 'tres': 3, 'três': 3,
+      'quatro': 4, 'cinco': 5, 'seis': 6, 'sete': 7, 'oito': 8,
+      'nove': 9, 'dez': 10
     };
-
+    
     for (var entry in numberWords.entries) {
-      if (text.contains(entry.key + ' ' + itemName) ||
+      if (text.contains(entry.key + ' ' + itemName) || 
           text.contains(entry.key + itemName)) {
         print('Quantidade encontrada por extenso: ${entry.value}');
         return entry.value;
       }
     }
-
+    
     // Verificar se há um número no início do texto (caso comum: "3 pao")
     RegExp startNumberRegExp = RegExp(r'^\s*(\d+)\s+');
     var startMatch = startNumberRegExp.firstMatch(text);
@@ -496,7 +477,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
       print('Quantidade encontrada no início do texto: $quantity');
       return quantity;
     }
-
+    
     // Padrão não encontrado, assumir quantidade 1
     print('Nenhum padrão de quantidade encontrado, usando padrão: 1');
     return 1;
@@ -504,13 +485,14 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
 
   void _addToCart(List<PoliedroOrderItem> items) {
     if (items.isEmpty) return;
-
+    
     setState(() {
       for (var item in items) {
         // Verificar se o item já está no carrinho
-        int existingIndex = _cart
-            .indexWhere((cartItem) => cartItem.menuItem.id == item.menuItem.id);
-
+        int existingIndex = _cart.indexWhere(
+          (cartItem) => cartItem.menuItem.id == item.menuItem.id
+        );
+        
         if (existingIndex >= 0) {
           // Atualizar quantidade
           _cart[existingIndex] = PoliedroOrderItem(
@@ -523,15 +505,14 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
         }
       }
     });
-
+    
     // Confirmar adição ao carrinho
     if (items.length == 1) {
-      _addBotMessage(
-          'Adicionei ${items[0].quantity} ${items[0].menuItem.name} ao seu pedido.');
+      _addBotMessage('Adicionei ${items[0].quantity} ${items[0].menuItem.name} ao seu pedido.');
     } else {
       _addBotMessage('Adicionei os itens ao seu pedido.');
     }
-
+    
     // Mostrar resumo do pedido
     _showOrderSummary();
   }
@@ -539,26 +520,21 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
   void _addOrderDescription(String text) {
     // Extrair a descrição do texto
     String description = text;
-
+    
     // Remover palavras-chave comuns
     List<String> keywordsToRemove = [
-      'observação',
-      'observacao',
-      'descrição',
-      'descricao',
-      'nota',
-      'adicionar',
-      'incluir'
+      'observação', 'observacao', 'descrição', 'descricao', 
+      'nota', 'adicionar', 'incluir'
     ];
-
+    
     for (var keyword in keywordsToRemove) {
       description = description.replaceAll(keyword, '').trim();
     }
-
+    
     setState(() {
       _orderDescription = description;
     });
-
+    
     _addBotMessage('Adicionei a observação: "$description" ao seu pedido.');
     _showOrderSummary();
   }
@@ -568,37 +544,36 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
       _addBotMessage('Seu carrinho está vazio.');
       return;
     }
-
+    
     final buffer = StringBuffer();
     buffer.writeln('Resumo do seu pedido:');
     buffer.writeln();
-
+    
     double total = 0;
-
+    
     for (var item in _cart) {
       double itemTotal = item.menuItem.price * item.quantity;
-      buffer.writeln(
-          '${item.quantity} x ${item.menuItem.name} - R\$ ${itemTotal.toStringAsFixed(2)}');
+      buffer.writeln('${item.quantity} x ${item.menuItem.name} - R\$ ${itemTotal.toStringAsFixed(2)}');
       total += itemTotal;
     }
-
+    
     buffer.writeln();
-
+    
     // Adicionar descrição/observações se existir
     if (_orderDescription.isNotEmpty) {
       buffer.writeln('Observações: $_orderDescription');
       buffer.writeln();
     }
-
+    
     buffer.writeln('Total: R\$ ${total.toStringAsFixed(2)}');
-
+    
     _addBotMessage(buffer.toString());
     _addBotMessage('O que deseja fazer?');
-
+    
     // Adicionar opções explícitas para o usuário como botões
     Future.delayed(const Duration(milliseconds: 300), () {
       if (!mounted) return;
-
+      
       // Criar ações para os botões - chamando diretamente as funções corretas
       List<ChatAction> actions = [
         ChatAction(
@@ -612,8 +587,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
           label: 'Adicionar',
           action: () {
             // Apenas mostrar uma mensagem para adicionar mais itens
-            _addBotMessage(
-                'O que mais você gostaria de adicionar ao seu pedido?');
+            _addBotMessage('O que mais você gostaria de adicionar ao seu pedido?');
           },
         ),
         ChatAction(
@@ -624,13 +598,12 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
           },
         ),
       ];
-
+      
       // Adicionar mensagem com botões
       setState(() {
         _messages.add(
           ChatMessage(
-            text:
-                'Digite "confirmar" para finalizar o pedido, "adicionar" para incluir mais itens, ou "cancelar" para limpar o carrinho.',
+            text: 'Digite "confirmar" para finalizar o pedido, "adicionar" para incluir mais itens, ou "cancelar" para limpar o carrinho.',
             isUser: false,
             timestamp: DateTime.now(),
             isActionButtons: true,
@@ -643,76 +616,71 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
 
   Future<void> _confirmOrder() async {
     if (_cart.isEmpty) {
-      _addBotMessage(
-          'Seu carrinho está vazio. Adicione itens antes de confirmar o pedido.');
+      _addBotMessage('Seu carrinho está vazio. Adicione itens antes de confirmar o pedido.');
       return;
     }
-
+    
     setState(() {
       _isLoading = true;
     });
-
+    
     try {
       print('Iniciando confirmação do pedido...');
-
+      
       // Obter o próximo número de pedido
       int orderNumber = await _getNextOrderNumber();
       print('Número do pedido obtido: $orderNumber');
-
+      
       // Calcular o total do pedido
-      double total = _cart.fold(
-          0, (sum, item) => sum + (item.menuItem.price * item.quantity));
+      double total = _cart.fold(0, (sum, item) => sum + (item.menuItem.price * item.quantity));
       print('Total do pedido: $total');
-
+      
       // Obter informações do usuário
-      final authProvider =
-          Provider.of<ChatbotAuthProvider>(context, listen: false);
+      final authProvider = Provider.of<ChatbotAuthProvider>(context, listen: false);
       final userEmail = authProvider.currentUser?.ra ?? '';
       final userPhone = authProvider.cachedPhone ?? '';
       print('Informações do usuário - RA: $userEmail, Telefone: $userPhone');
-
+      
       // Criar o pedido
       final orderId = const Uuid().v4();
       print('ID do pedido gerado: $orderId');
-
+      
       // Imprimir itens do carrinho para debug
       print('Itens no carrinho:');
       for (var item in _cart) {
-        print(
-            '- ${item.quantity}x ${item.menuItem.name} (R\$ ${item.menuItem.price})');
+        print('- ${item.quantity}x ${item.menuItem.name} (R\$ ${item.menuItem.price})');
       }
-
+      
       final order = PoliedroOrder(
         id: orderId,
         ra: userEmail,
         timestamp: DateTime.now(),
-        items: List<PoliedroOrderItem>.from(
-            _cart), // Criar uma cópia da lista para evitar problemas de referência
+        items: List<PoliedroOrderItem>.from(_cart), // Criar uma cópia da lista para evitar problemas de referência
         total: total,
         status: OrderStatus.pending.value,
         notes: _orderDescription,
         orderNumber: orderNumber.toString(),
         phone: userPhone,
       );
-
+      
       print('Pedido criado com sucesso. Salvando no Firebase...');
-
+      
       // Salvar o pedido
       final orderProvider = Provider.of<OrderProvider>(context, listen: false);
       await orderProvider.addOrder(order);
-
+      
       print('Pedido salvo com sucesso no Firebase!');
-
+      
       if (!mounted) return;
-
+      
       setState(() {
         _isLoading = false;
         _cart.clear();
         _orderDescription = '';
       });
-
+      
       print('Navegando para a tela de confirmação...');
-
+      
       // Navegar para a tela de confirmação
       try {
         // Usar Future.delayed para garantir que a navegação ocorra após a conclusão do setState
@@ -723,11 +691,9 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
               '/confirmation',
               arguments: {
                 'title': 'Pedido #$orderNumber Confirmado!',
-                'message':
-                    'Seu pedido foi registrado com sucesso.\nTotal: R\$ ${total.toStringAsFixed(2)}',
+                'message': 'Seu pedido foi registrado com sucesso.\nTotal: R\$ ${total.toStringAsFixed(2)}',
                 'buttonText': 'Voltar ao Menu',
-                'onConfirm': () =>
-                    Navigator.pushReplacementNamed(context, '/chatbot'),
+                'onConfirm': () => Navigator.pushReplacementNamed(context, '/chatbot'),
               },
             ).catchError((error) {
               print('Erro ao navegar para tela de confirmação: $error');
@@ -745,20 +711,19 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
         _addBotMessage('Total: R\$ ${total.toStringAsFixed(2)}');
         _addBotMessage('O que mais você gostaria de pedir hoje?');
       }
-
+      
       print('Navegação para tela de confirmação iniciada');
     } catch (e) {
       if (!mounted) return;
-
+      
       setState(() {
         _isLoading = false;
       });
-
+      
       print('ERRO AO CONFIRMAR PEDIDO: $e');
       print('Stack trace: ${StackTrace.current}');
-
-      _addBotMessage(
-          'Desculpe, ocorreu um erro ao confirmar seu pedido. Por favor, tente novamente.');
+      
+      _addBotMessage('Desculpe, ocorreu um erro ao confirmar seu pedido. Por favor, tente novamente.');
     }
   }
 
@@ -769,24 +734,23 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
           .collection('counters')
           .doc('order_number')
           .get();
-
+      
       int currentValue = 0;
-
+      
       // Se o documento existir, obter o valor atual
       if (counterDoc.exists) {
-        currentValue =
-            (counterDoc.data() as Map<String, dynamic>)['value'] ?? 0;
+        currentValue = (counterDoc.data() as Map<String, dynamic>)['value'] ?? 0;
       }
-
+      
       // Incrementar o contador
       int nextValue = currentValue + 1;
-
+      
       // Atualizar o contador no Firestore
       await FirebaseFirestore.instance
           .collection('counters')
           .doc('order_number')
           .set({'value': nextValue});
-
+      
       return nextValue;
     } catch (e) {
       print('Erro ao obter número do pedido: $e');
@@ -820,18 +784,16 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
 
   Future<void> _logout() async {
     try {
-      final authProvider =
-          Provider.of<ChatbotAuthProvider>(context, listen: false);
+      final authProvider = Provider.of<ChatbotAuthProvider>(context, listen: false);
       await authProvider.logout();
-
+      
       if (!mounted) return;
-
+      
       // Navegar para a tela de login
       Navigator.pushReplacementNamed(context, '/login');
     } catch (e) {
       print('Erro ao fazer logout: $e');
-      _addBotMessage(
-          'Desculpe, ocorreu um erro ao sair. Por favor, tente novamente.');
+      _addBotMessage('Desculpe, ocorreu um erro ao sair. Por favor, tente novamente.');
     }
   }
 
@@ -841,7 +803,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
     if (!_isInitialized && !_isLoading) {
       _initializeChat();
     }
-
+    
     return Scaffold(
       appBar: AppBar(
         title: const Text('Poliedro Food'),
@@ -879,7 +841,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
           if (index < 0 || index >= _messages.length) {
             return const SizedBox.shrink();
           }
-
+          
           final message = _messages[index];
           return _buildMessageBubble(message);
         },
@@ -902,8 +864,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
                 const SizedBox(width: 8.0),
                 Flexible(
                   child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16.0, vertical: 10.0),
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
                     decoration: BoxDecoration(
                       color: PoliedroFoodStyle.backgroundLight,
                       borderRadius: BorderRadius.circular(20.0),
@@ -919,7 +880,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
               ],
             ),
           ),
-
+          
           // Botões de ação
           Container(
             margin: const EdgeInsets.only(top: 8.0, bottom: 16.0, left: 8.0),
@@ -944,22 +905,20 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
         ],
       );
     }
-
+    
     // Mensagem normal (sem botões)
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 4.0),
       child: Row(
-        mainAxisAlignment:
-            message.isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
+        mainAxisAlignment: message.isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
         children: [
           if (!message.isUser) const SizedBox(width: 8.0),
           Flexible(
             child: Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
+              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
               decoration: BoxDecoration(
-                color: message.isUser
-                    ? PoliedroFoodStyle.primaryBlue
+                color: message.isUser 
+                    ? PoliedroFoodStyle.primaryBlue 
                     : PoliedroFoodStyle.backgroundLight,
                 borderRadius: BorderRadius.circular(20.0),
               ),
@@ -1047,8 +1006,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
-              onPressed: () =>
-                  _addBotMessage('Digite sua observação para o pedido:'),
+              onPressed: () => _addBotMessage('Digite sua observação para o pedido:'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: PoliedroFoodStyle.backgroundLight,
                 foregroundColor: PoliedroFoodStyle.neutralDark,

@@ -59,9 +59,13 @@ class _KitchenScreenState extends State<KitchenScreen> {
             backgroundColor: PoliedroFoodStyle.errorRed,
           ),
         );
+        return; // Importante: retornar aqui para evitar continuar o carregamento
       }
+
       // Cancel any existing subscription just in case
       _ordersSubscription?.cancel();
+
+      print('KitchenScreen: Iniciando carregamento de pedidos');
 
       // Get the stream of orders
       _ordersStream = orderProvider.getOrdersStream();
@@ -69,6 +73,13 @@ class _KitchenScreenState extends State<KitchenScreen> {
       // Subscribe to the stream
       _ordersSubscription = _ordersStream?.listen((orders) {
         if (mounted) {
+          print('KitchenScreen: Recebidos ${orders.length} pedidos do stream');
+          final pendingOrders = orders
+              .where((order) => order.status == OrderStatus.pending.value)
+              .toList();
+          print(
+              'KitchenScreen: Filtrados ${pendingOrders.length} pedidos pendentes');
+
           setState(() {
             _orders = orders;
             _isLoading = false;
