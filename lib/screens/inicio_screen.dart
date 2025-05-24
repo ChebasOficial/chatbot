@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:chatbot/config/style_guide.dart';
 import 'package:provider/provider.dart';
 import 'package:chatbot/providers/auth_provider.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -68,19 +69,10 @@ class _InicioScreenState extends State<InicioScreen> with SingleTickerProviderSt
     final screenSize = MediaQuery.of(context).size;
     
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: PoliedroFoodStyle.white,
       body: SafeArea(
         child: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                Colors.white,
-                Colors.blue.shade50,
-              ],
-            ),
-          ),
+          decoration: PoliedroFoodStyle.gradientContainerDecoration,
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 40.0, vertical: 20.0),
             child: Column(
@@ -93,34 +85,25 @@ class _InicioScreenState extends State<InicioScreen> with SingleTickerProviderSt
                     position: _slideAnimation,
                     child: Column(
                       children: [
-                        const SizedBox(height: 60),
+                        const SizedBox(height: PoliedroFoodStyle.spacingXXL),
                         // Logo do Poliedro em SVG para alta qualidade
                         SvgPicture.asset(
                           'lib/images/poliedro_logo.svg',
                           height: screenSize.height * 0.15,
                           fit: BoxFit.contain,
                         ),
-                        const SizedBox(height: 24),
+                        const SizedBox(height: PoliedroFoodStyle.spacingL),
                         // Título do App
-                        Text(
+                        const Text(
                           'Poliedro Food',
-                          style: TextStyle(
-                            fontSize: 32,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.blue[800],
-                            letterSpacing: 1.2,
-                          ),
+                          style: PoliedroFoodStyle.headingLarge,
                         ),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: PoliedroFoodStyle.spacingS),
                         // Subtítulo
-                        Text(
+                        const Text(
                           'Seu pedido a um clique de distância',
                           textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: Colors.grey[700],
-                            fontWeight: FontWeight.w500,
-                          ),
+                          style: PoliedroFoodStyle.bodySmall,
                         ),
                       ],
                     ),
@@ -140,44 +123,16 @@ class _InicioScreenState extends State<InicioScreen> with SingleTickerProviderSt
                                 onPressed: () {
                                   Navigator.pushReplacementNamed(context, '/admin');
                                 },
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.blue[700],
-                                  minimumSize: const Size(double.infinity, 60),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(15),
-                                  ),
-                                  elevation: 5,
-                                ),
-                                child: const Text(
-                                  'Gerenciar Produtos',
-                                  style: TextStyle(
-                                    fontSize: 18, 
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
+                                style: PoliedroFoodStyle.primaryButtonStyle,
+                                child: const Text('Gerenciar Produtos'),
                               );
                             } else {
                               return ElevatedButton(
                                 onPressed: () {
                                   Navigator.pushReplacementNamed(context, '/chatbot');
                                 },
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.blue[700],
-                                  minimumSize: const Size(double.infinity, 60),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(15),
-                                  ),
-                                  elevation: 5,
-                                ),
-                                child: const Text(
-                                  'Acessar Chatbot',
-                                  style: TextStyle(
-                                    fontSize: 18, 
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
+                                style: PoliedroFoodStyle.primaryButtonStyle,
+                                child: const Text('Acessar Chatbot'),
                               );
                             }
                           } else {
@@ -185,46 +140,22 @@ class _InicioScreenState extends State<InicioScreen> with SingleTickerProviderSt
                               children: [
                                 Container(
                                   decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(15),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.blue.withOpacity(0.3),
-                                        spreadRadius: 1,
-                                        blurRadius: 10,
-                                        offset: const Offset(0, 5),
-                                      ),
-                                    ],
+                                    borderRadius: BorderRadius.circular(PoliedroFoodStyle.radiusM),
+                                    boxShadow: PoliedroFoodStyle.shadowMedium,
                                   ),
                                   child: ElevatedButton(
                                     onPressed: () {
                                       Navigator.pushNamed(context, '/login');
                                     },
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.blue[700],
-                                      minimumSize: const Size(double.infinity, 60),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(15),
-                                      ),
-                                      elevation: 0,
-                                    ),
-                                    child: const Text(
-                                      'Fazer Login',
-                                      style: TextStyle(
-                                        fontSize: 18, 
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
+                                    style: PoliedroFoodStyle.primaryButtonStyle,
+                                    child: const Text('Fazer Login'),
                                   ),
                                 ),
-                                const SizedBox(height: 16),
-                                Text(
+                                const SizedBox(height: PoliedroFoodStyle.spacingM),
+                                const Text(
                                   'Faça login para acessar o cardápio e realizar pedidos',
                                   textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: Colors.grey[600],
-                                  ),
+                                  style: PoliedroFoodStyle.bodySmall,
                                 ),
                               ],
                             );
@@ -240,13 +171,10 @@ class _InicioScreenState extends State<InicioScreen> with SingleTickerProviderSt
                   opacity: _fadeInAnimation,
                   child: Column(
                     children: [
-                      const SizedBox(height: 20),
+                      const SizedBox(height: PoliedroFoodStyle.spacingM),
                       Text(
                         '© ${DateTime.now().year} Poliedro',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey[500],
-                        ),
+                        style: PoliedroFoodStyle.caption,
                       ),
                     ],
                   ),

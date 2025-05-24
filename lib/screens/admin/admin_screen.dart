@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:chatbot/screens/admin/admin_products_screen.dart';
 import 'package:chatbot/screens/admin/order_history_tab.dart';
+import 'package:chatbot/config/style_guide.dart';
 
 class AdminScreen extends StatefulWidget {
   const AdminScreen({Key? key}) : super(key: key);
@@ -28,13 +29,25 @@ class _AdminScreenState extends State<AdminScreen> with SingleTickerProviderStat
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Painel Administrativo'),
+        backgroundColor: PoliedroFoodStyle.primaryBlue,
+        title: const Text(
+          'Painel Administrativo',
+          style: TextStyle(
+            color: PoliedroFoodStyle.white,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         automaticallyImplyLeading: false, // Remove o botão de voltar
+        elevation: 0,
         bottom: TabBar(
           controller: _tabController,
-          labelColor: Colors.white,
+          labelColor: PoliedroFoodStyle.white,
           unselectedLabelColor: Colors.white70,
-          indicatorColor: Colors.white,
+          indicatorColor: PoliedroFoodStyle.white,
+          labelStyle: const TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 16,
+          ),
           tabs: const [
             Tab(text: 'Produtos'),
             Tab(text: 'Histórico de Pedidos'),
@@ -42,19 +55,31 @@ class _AdminScreenState extends State<AdminScreen> with SingleTickerProviderStat
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.exit_to_app),
+            icon: const Icon(Icons.exit_to_app, color: PoliedroFoodStyle.white),
             onPressed: () {
               Navigator.pushReplacementNamed(context, '/login');
             },
           ),
         ],
       ),
-      body: TabBarView(
-        controller: _tabController,
-        children: const [
-          AdminProductsScreen(),
-          OrderHistoryTab(),
-        ],
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              PoliedroFoodStyle.white,
+              PoliedroFoodStyle.backgroundLight,
+            ],
+          ),
+        ),
+        child: TabBarView(
+          controller: _tabController,
+          children: const [
+            AdminProductsScreen(),
+            OrderHistoryTab(),
+          ],
+        ),
       ),
     );
   }

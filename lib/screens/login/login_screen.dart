@@ -6,6 +6,8 @@ import 'package:chatbot/utils/validators.dart';
 import 'package:chatbot/widgets/custom_button.dart';
 import 'package:chatbot/widgets/custom_text_field.dart';
 import 'package:chatbot/models/user.dart';
+import 'package:chatbot/config/style_guide.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
@@ -91,143 +93,127 @@ class _LoginScreenState extends State<LoginScreen> {
     return Scaffold(
       body: Container(
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Theme.of(context).primaryColor,
-              Theme.of(context).primaryColor.withOpacity(0.8),
-            ],
-          ),
+          gradient: PoliedroFoodStyle.mainGradient,
         ),
         child: SafeArea(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.all(PoliedroFoodStyle.spacingL),
             child: Column(
               children: [
                 // Logo e título
                 Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 32),
+                  padding: const EdgeInsets.symmetric(vertical: PoliedroFoodStyle.spacingXL),
                   child: Column(
                     children: [
-                      Container(
-                        width: 80,
+                      SvgPicture.asset(
+                        'lib/images/poliedro_logo.svg',
                         height: 80,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Center(
-                          child: Text(
-                            'P',
-                            style: TextStyle(
-                              fontSize: 40,
-                              fontWeight: FontWeight.bold,
-                              color: Theme.of(context).primaryColor,
-                            ),
-                          ),
-                        ),
+                        fit: BoxFit.contain,
                       ),
-                      const SizedBox(height: 16),
-                      Text(
+                      const SizedBox(height: PoliedroFoodStyle.spacingM),
+                      const Text(
+                        'Poliedro Food',
+                        style: PoliedroFoodStyle.headingLarge,
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: PoliedroFoodStyle.spacingS),
+                      const Text(
                         'Restaurante Escola Poliedro',
-                        style:
-                            Theme.of(context).textTheme.displayMedium?.copyWith(
-                                  color: Colors.white,
-                                ),
+                        style: PoliedroFoodStyle.bodyMedium,
                         textAlign: TextAlign.center,
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(height: 32),
+                const SizedBox(height: PoliedroFoodStyle.spacingL),
                 // Formulário de login
-                Card(
-                  elevation: 4,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
+                Container(
+                  decoration: PoliedroFoodStyle.cardDecoration,
                   child: Padding(
-                    padding: const EdgeInsets.all(24.0),
+                    padding: const EdgeInsets.all(PoliedroFoodStyle.spacingL),
                     child: Form(
                       key: _formKey,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          Text(
+                          const Text(
                             'Acesso ao Chatbot',
-                            style: Theme.of(context).textTheme.displayMedium,
+                            style: PoliedroFoodStyle.headingMedium,
                             textAlign: TextAlign.center,
                           ),
-                          const SizedBox(height: 8),
-                          Text(
+                          const SizedBox(height: PoliedroFoodStyle.spacingS),
+                          const Text(
                             'Por favor, faça login para acessar o chatbot.',
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodyMedium
-                                ?.copyWith(
-                                  color: Colors.grey[600],
-                                ),
+                            style: PoliedroFoodStyle.bodySmall,
                             textAlign: TextAlign.center,
                           ),
-                          const SizedBox(height: 24),
+                          const SizedBox(height: PoliedroFoodStyle.spacingL),
                           // Campo de R.A.
-                          CustomTextField(
+                          TextFormField(
                             controller: _raController,
-                            label: 'Registro Acadêmico (R.A.)',
-                            hintText: '12345678@p4ed.com.br',
-                            prefixIcon: Icons.person,
+                            decoration: PoliedroFoodStyle.inputDecoration(
+                              labelText: 'Registro Acadêmico (R.A.)',
+                              hintText: '12345678@p4ed.com.br',
+                              prefixIcon: const Icon(Icons.person),
+                            ),
                             validator: Validators.validateRA,
                             textInputAction: TextInputAction.next,
                           ),
 
                           // Campo de telefone - sempre visível
-                          const SizedBox(height: 16),
-                          CustomTextField(
+                          const SizedBox(height: PoliedroFoodStyle.spacingM),
+                          TextFormField(
                             controller: _phoneController,
-                            label: 'Telefone',
-                            hintText: '(11) 98765-4321',
-                            prefixIcon: Icons.phone,
+                            decoration: PoliedroFoodStyle.inputDecoration(
+                              labelText: 'Telefone',
+                              hintText: '(11) 98765-4321',
+                              prefixIcon: const Icon(Icons.phone),
+                            ),
                             keyboardType: TextInputType.phone,
                             inputFormatters: [_phoneMask],
                             validator: Validators.validatePhone,
                             textInputAction: TextInputAction.done,
                             onFieldSubmitted: (_) => _login(),
                           ),
-                          const SizedBox(height: 8),
+                          const SizedBox(height: PoliedroFoodStyle.spacingS),
 
                           // Mensagem de erro
                           if (_errorMessage != null) ...[
-                            const SizedBox(height: 16),
+                            const SizedBox(height: PoliedroFoodStyle.spacingM),
                             Text(
                               _errorMessage!,
                               style: TextStyle(
-                                color: Colors.red[700],
+                                color: PoliedroFoodStyle.errorRed,
                                 fontWeight: FontWeight.bold,
                               ),
                               textAlign: TextAlign.center,
                             ),
                           ],
 
-                          const SizedBox(height: 24),
+                          const SizedBox(height: PoliedroFoodStyle.spacingL),
                           // Botão de login
-                          CustomButton(
-                            text: 'Continuar',
-                            isLoading: _isLoading,
-                            onPressed: _login,
+                          ElevatedButton(
+                            style: PoliedroFoodStyle.primaryButtonStyle,
+                            onPressed: _isLoading ? null : _login,
+                            child: _isLoading
+                                ? const SizedBox(
+                                    height: 20,
+                                    width: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                : const Text('Continuar'),
                           ),
-                          const SizedBox(height: 16),
+                          const SizedBox(height: PoliedroFoodStyle.spacingM),
                           // Link para login administrativo
                           TextButton(
+                            style: PoliedroFoodStyle.textButtonStyle,
                             onPressed: () {
                               Navigator.pushNamed(context, '/admin-login');
                             },
-                            child: Text(
-                              'Acesso Administrativo',
-                              style: TextStyle(
-                                color: Theme.of(context).primaryColor,
-                              ),
-                            ),
+                            child: const Text('Acesso Administrativo'),
                           ),
                         ],
                       ),
