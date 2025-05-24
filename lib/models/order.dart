@@ -105,7 +105,30 @@ class PoliedroOrder {
   }
 
   factory PoliedroOrder.fromJson(Map<String, dynamic> json) {
-    final timestamp = DateTime.parse(json['timestamp']);
+    // Tratamento robusto para o campo timestamp que pode vir em diferentes formatos
+    DateTime timestamp;
+    final timestampData = json['timestamp'];
+    
+    if (timestampData == null) {
+      // Se não houver timestamp, usar data atual
+      timestamp = DateTime.now();
+    } else if (timestampData is int) {
+      // Se for um inteiro (milissegundos desde a época)
+      timestamp = DateTime.fromMillisecondsSinceEpoch(timestampData);
+    } else if (timestampData is String) {
+      // Se for uma string ISO
+      timestamp = DateTime.parse(timestampData);
+    } else {
+      // Para outros casos (como Timestamp do Firestore), converter para string e depois para DateTime
+      try {
+        timestamp = DateTime.parse(timestampData.toString());
+      } catch (e) {
+        // Fallback para data atual em caso de erro
+        print('Erro ao converter timestamp: $e');
+        timestamp = DateTime.now();
+      }
+    }
+    
     final items = (json['items'] as List)
         .map((item) => PoliedroOrderItem.fromJson(item))
         .toList();
@@ -125,16 +148,22 @@ class PoliedroOrder {
   }
 
   Map<String, dynamic> toJson() {
+    // Imprimir para debug
+    print('Convertendo pedido para JSON - ID: $id, RA: $ra, OrderNumber: $orderNumber');
+    
     return {
       'id': id,
       'ra': ra,
-      'timestamp': timestamp.toIso8601String(),
+      'timestamp': timestamp.millisecondsSinceEpoch,  // Converter para milissegundos para evitar problemas de tipo
       'items': items.map((item) => item.toJson()).toList(),
       'total': total,
       'status': status,
       'notes': notes,
       'orderNumber': orderNumber,
       'phone': _phone,
+      // Adicionar campos explícitos para garantir compatibilidade com a tela admin
+      'userEmail': ra,  // Garantir que userEmail também esteja disponível
+      'description': notes,  // Garantir que description também esteja disponível
     };
   }
 }

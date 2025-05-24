@@ -158,45 +158,18 @@ class _KitchenScreenState extends State<KitchenScreen> {
           ? const Center(child: CircularProgressIndicator())
           : _orders.isEmpty
               ? const Center(child: Text('Nenhum pedido pendente.'))
-              : Row(
-                  children: [
-                    // Lista de pedidos (lado esquerdo)
-                    Expanded(
-                      flex: 2,
-                      child: ListView.builder(
-                        itemCount: _orders.length,
-                        itemBuilder: (context, index) {
-                          final order = _orders[index];
-                          return Card(
-                            margin: const EdgeInsets.all(8.0),
-                            child: ListTile(
-                              title: Text('Pedido #${order.id}'),
-                              subtitle: Text('RA: ${order.user.ra}'),
-                              selected: index == _selectedOrderIndex,
-                              selectedTileColor: PoliedroFoodStyle.backgroundLight,
-                              onTap: () {
-                                setState(() {
-                                  _selectedOrderIndex = index;
-                                });
-                              },
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                    // Detalhes do pedido selecionado (lado direito)
-                    Expanded(
-                      flex: 3,
-                      child: _selectedOrderIndex >= 0 && _selectedOrderIndex < _orders.length
-                          ? _buildOrderDetails(_orders[_selectedOrderIndex])
-                          : const Center(child: Text('Selecione um pedido para ver os detalhes.')),
-                    ),
-                  ],
+              : ListView.builder(
+                  padding: const EdgeInsets.all(8.0),
+                  itemCount: _orders.length,
+                  itemBuilder: (context, index) {
+                    final order = _orders[index];
+                    return _buildOrderCard(order, index);
+                  },
                 ),
     );
   }
 
-  Widget _buildOrderDetails(PoliedroOrder order) {
+  Widget _buildOrderCard(PoliedroOrder order, int index) {
     // Calcular o total do pedido
     double total = 0;
     for (var item in order.items) {
@@ -204,52 +177,71 @@ class _KitchenScreenState extends State<KitchenScreen> {
     }
 
     return Card(
-      margin: const EdgeInsets.all(16.0),
+      margin: const EdgeInsets.all(8.0),
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Pedido #${order.id}',
-              style: PoliedroFoodStyle.headingMedium.copyWith(
-                color: PoliedroFoodStyle.neutralDark,
-              ),
+            // Cabeçalho do pedido
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Pedido #${order.orderNumber}',
+                  style: PoliedroFoodStyle.headingMedium.copyWith(
+                    color: PoliedroFoodStyle.neutralDark,
+                  ),
+                ),
+                Text(
+                  order.formattedDate,
+                  style: TextStyle(
+                    color: Colors.grey[600],
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 8.0),
-            Text('RA: ${order.user.ra}'),
-            Text('Telefone: ${order.user.phone}'),
-            Text('Data: ${order.formattedDate}'),
+            
+            // Informações do cliente
+            Text('RA: ${order.user.ra}', style: const TextStyle(fontWeight: FontWeight.bold)),
+            if (order.user.phone.isNotEmpty) Text('Telefone: ${order.user.phone}'),
             const Divider(),
-            Text(
-              'Descrição:',
-              style: PoliedroFoodStyle.subtitleLarge,
-            ),
-            Text(order.description),
-            const Divider(),
+            
+            // Descrição/Observações
+            if (order.notes.isNotEmpty) ...[
+              Text(
+                'Observações:',
+                style: PoliedroFoodStyle.subtitleLarge,
+              ),
+              Text(order.notes),
+              const Divider(),
+            ],
+            
+            // Lista de itens
             Text(
               'Itens:',
               style: PoliedroFoodStyle.subtitleLarge,
             ),
-            Expanded(
-              child: ListView.builder(
-                itemCount: order.items.length,
-                itemBuilder: (context, index) {
-                  final item = order.items[index];
-                  return ListTile(
-                    title: Text(item.name),
-                    subtitle: Text('Quantidade: ${item.quantity}'),
-                    trailing: Text(
+            const SizedBox(height: 8.0),
+            ...order.items.map((item) {
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 4.0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(child: Text('${item.quantity}x ${item.name}')),
+                    Text(
                       'R\$ ${(item.price * item.quantity).toStringAsFixed(2)}',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                      ),
+                      style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
-                  );
-                },
-              ),
-            ),
+                  ],
+                ),
+              );
+            }).toList(),
             const Divider(),
+            
+            // Total
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -263,18 +255,21 @@ class _KitchenScreenState extends State<KitchenScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: 24.0),
+            const SizedBox(height: 16.0),
+            
+            // Botão de confirmar
             Align(
               alignment: Alignment.center,
               child: SizedBox(
-                width: 200,
+                width: double.infinity,
                 child: ElevatedButton.icon(
-                  onPressed: () => _confirmOrder(_selectedOrderIndex),
+                  onPressed: () => _confirmOrder(index),
                   icon: const Icon(Icons.check_circle),
                   label: const Text('CONFIRMAR PEDIDO'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: PoliedroFoodStyle.neutralDark,
                     foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12.0),
                   ),
                 ),
               ),
@@ -283,5 +278,10 @@ class _KitchenScreenState extends State<KitchenScreen> {
         ),
       ),
     );
+  }
+  
+  // Mantido para compatibilidade, mas não usado mais diretamente
+  Widget _buildOrderDetails(PoliedroOrder order) {
+    return Container(); // Método vazio, não usado mais
   }
 }

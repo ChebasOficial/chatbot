@@ -52,6 +52,27 @@ class _OrderHistoryTabState extends State<OrderHistoryTab> {
     return 0;
   }
 
+  // Função segura para converter timestamp para DateTime
+  DateTime _parseTimestamp(dynamic timestampData) {
+    if (timestampData == null) {
+      return DateTime.now();
+    } else if (timestampData is Timestamp) {
+      return timestampData.toDate();
+    } else if (timestampData is int) {
+      return DateTime.fromMillisecondsSinceEpoch(timestampData);
+    } else if (timestampData is String) {
+      try {
+        return DateTime.parse(timestampData);
+      } catch (e) {
+        print('Erro ao converter timestamp string: $e');
+        return DateTime.now();
+      }
+    } else {
+      print('Tipo de timestamp desconhecido: ${timestampData.runtimeType}');
+      return DateTime.now();
+    }
+  }
+
   Future<void> _loadOrders() async {
     setState(() {
       _isLoading = true;
@@ -67,27 +88,35 @@ class _OrderHistoryTabState extends State<OrderHistoryTab> {
         final data = doc.data();
         // Tratamento de nulos e tipos para todos os campos relevantes
         final orderNumber = _parseOrderNumber(data['orderNumber']); // Usar função segura
-        final userEmail = (data['userEmail'] as String?) ?? ''; // Usar email
-        final timestamp = data['timestamp'] as Timestamp?;
+        final userEmail = (data['ra'] as String?) ?? ''; // Usar RA em vez de email
+        final timestampData = data['timestamp']; // Obter o timestamp sem cast
+        final DateTime dateTime = _parseTimestamp(timestampData); // Converter com segurança
         final itemsData = (data['items'] as List<dynamic>?) ?? [];
         final total = (data['total'] as num?)?.toDouble() ?? 0.0;
-        final description = (data['description'] as String?) ?? ''; // Ler descrição
+        final description = (data['notes'] as String?) ?? ''; // Usar notes em vez de description
 
-        // Mapear itens com tratamento de nulos interno
+        // Mapear itens com tratamento de nulos interno e estrutura aninhada
         final items = itemsData.map((itemData) {
           final itemMap = itemData as Map<String, dynamic>? ?? {};
+          final quantity = itemMap['quantity'] as int? ?? 0;
+          
+          // Verificar se existe o objeto menuItem aninhado
+          final menuItemMap = itemMap['menuItem'] as Map<String, dynamic>? ?? {};
+          final name = (menuItemMap['name'] as String?) ?? 'Item desconhecido';
+          final price = (menuItemMap['price'] as num?)?.toDouble() ?? 0.0;
+          
           return {
-            'name': (itemMap['name'] as String?) ?? 'Item desconhecido',
-            'quantity': (itemMap['quantity'] as int?) ?? 0,
-            'price': (itemMap['price'] as num?)?.toDouble() ?? 0.0,
+            'name': name,
+            'quantity': quantity,
+            'price': price,
           };
         }).toList();
 
         return {
           'id': doc.id,
           'orderNumber': orderNumber,
-          'userEmail': userEmail, // Salvar email
-          'timestamp': timestamp,
+          'userEmail': userEmail, // Usar RA como email
+          'timestamp': dateTime, // Usar DateTime já convertido
           'items': items,
           'total': total,
           'description': description, // Salvar descrição
@@ -186,8 +215,7 @@ class _OrderHistoryTabState extends State<OrderHistoryTab> {
 
                             // Acessar dados com segurança usando valores padrão definidos no _loadOrders
                             final orderNumber = order['orderNumber'] as int; // Já tratado
-                            final timestamp = order['timestamp'] as Timestamp?;
-                            final dateTime = timestamp?.toDate() ?? DateTime.now();
+                            final dateTime = order['timestamp'] as DateTime; // Já convertido para DateTime
                             final formattedDate = DateFormat('dd/MM/yyyy HH:mm').format(dateTime);
                             final email = order['userEmail'] as String; // Já tratado
                             final ra = _extractRA(email);

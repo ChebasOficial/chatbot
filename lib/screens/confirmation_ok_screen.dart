@@ -6,7 +6,9 @@ class ConfirmationOkScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Receber os argumentos da navegação
-    final Map<String, dynamic> args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>? ?? {};
+    final Map<String, dynamic> args =
+        ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>? ??
+            {};
     final int orderNumber = args['orderNumber'] as int? ?? 0;
     final double totalAmount = args['totalAmount'] as double? ?? 0.0;
 
@@ -31,7 +33,7 @@ class ConfirmationOkScreen extends StatelessWidget {
                 size: 100,
               ),
               const SizedBox(height: 32),
-              
+
               // Título
               Text(
                 'Pedido Confirmado!',
@@ -43,7 +45,7 @@ class ConfirmationOkScreen extends StatelessWidget {
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 16),
-              
+
               // Número do pedido
               Container(
                 padding: const EdgeInsets.all(16),
@@ -81,9 +83,9 @@ class ConfirmationOkScreen extends StatelessWidget {
                   ],
                 ),
               ),
-              
+
               const SizedBox(height: 32),
-              
+
               // Mensagem de agradecimento
               Text(
                 'Obrigado pela sua compra!',
@@ -102,9 +104,9 @@ class ConfirmationOkScreen extends StatelessWidget {
                 ),
                 textAlign: TextAlign.center,
               ),
-              
+
               const Spacer(),
-              
+
               // Botão para voltar ao início
               ElevatedButton(
                 onPressed: () {

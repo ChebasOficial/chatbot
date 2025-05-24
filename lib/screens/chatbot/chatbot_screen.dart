@@ -1,3 +1,4 @@
+import 'package:chatbot/screens/confirmation_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:chatbot/models/chat_message.dart';
 import 'package:chatbot/models/menu_item.dart';
@@ -199,6 +200,12 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
       return;
     }
 
+    // Verificar se é um comando para cancelar o pedido
+    if (_isCancelOrderCommand(text)) {
+      _cancelOrder();
+      return;
+    }
+
     // Verificar se é um comando para sair/logout
     if (_isLogoutCommand(text)) {
       _showLogoutConfirmation();
@@ -250,6 +257,26 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
         lowerText.contains('pronto');
   }
 
+  bool _isCancelOrderCommand(String text) {
+    if (_cart.isEmpty) return false;
+
+    final lowerText = text.toLowerCase();
+    return lowerText.contains('cancelar') ||
+        lowerText.contains('limpar') ||
+        lowerText.contains('esvaziar') ||
+        lowerText.contains('remover tudo');
+  }
+
+  void _cancelOrder() {
+    setState(() {
+      _cart.clear();
+      _orderDescription = '';
+    });
+
+    _addBotMessage('Seu pedido foi cancelado. O carrinho está vazio.');
+    _addBotMessage('O que você gostaria de pedir hoje?');
+  }
+
   bool _isLogoutCommand(String text) {
     final lowerText = text.toLowerCase();
     return lowerText.contains('sair') ||
@@ -266,8 +293,15 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
     // Normalizar o texto para facilitar a comparação
     String normalizedText = _normalizeText(text);
 
-    // Verificar explicitamente por "paes", "pães" ou "paos" antes de processar outros itens
-    if (normalizedText.contains("paes") ||
+    // Imprimir para debug
+    print('Texto normalizado para identificação: "$normalizedText"');
+    print(
+        'Itens disponíveis no menu: ${menuItems.map((item) => item.name).toList()}');
+
+    // Verificar explicitamente por "pao", "pão", "paes", "pães" ou "paos" antes de processar outros itens
+    if (normalizedText.contains("pao") ||
+        normalizedText.contains("pão") ||
+        normalizedText.contains("paes") ||
         normalizedText.contains("pães") ||
         normalizedText.contains("paos")) {
       // Buscar o item "pao" no menu
@@ -278,29 +312,40 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
               _normalizeText(item.name) == "pao" ||
               _normalizeText(item.name) == "pão",
         );
+        print('Item "pão" encontrado no menu: ${paoItem.name}');
       } catch (e) {
         // Item não encontrado, continuar com o processamento normal
-        print('Item "pão" não encontrado no menu');
+        print('Item "pão" não encontrado no menu: $e');
       }
 
       if (paoItem != null) {
         // Extrair quantidade - verificar todas as variações possíveis
         int quantity = 0;
-        if (normalizedText.contains("paes")) {
-          quantity = _extractQuantity(normalizedText, "paes");
-        } else if (normalizedText.contains("pães")) {
-          quantity = _extractQuantity(normalizedText, "pães");
-        } else if (normalizedText.contains("paos")) {
-          quantity = _extractQuantity(normalizedText, "paos");
+
+        // Verificar todas as variações possíveis
+        for (var form in ["pao", "pão", "paes", "pães", "paos"]) {
+          if (normalizedText.contains(form)) {
+            int extractedQuantity = _extractQuantity(normalizedText, form);
+            if (extractedQuantity > 0) {
+              quantity = extractedQuantity;
+              print('Quantidade extraída para "$form": $quantity');
+              break;
+            }
+          }
         }
 
         // Se não encontrou quantidade, usar 1 como padrão
-        if (quantity <= 0) quantity = 1;
+        if (quantity <= 0) {
+          quantity = 1;
+          print('Usando quantidade padrão: 1');
+        }
 
         result.add(PoliedroOrderItem(
           menuItem: paoItem,
           quantity: quantity,
         ));
+
+        print('Adicionado ao carrinho: ${quantity}x ${paoItem.name}');
 
         // Remover o item encontrado do texto para evitar duplicações
         normalizedText = normalizedText
@@ -326,11 +371,13 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
 
       // Verificar plurais irregulares
       List<String> possibleForms = _getPossibleForms(normalizedItemName);
+      print('Formas possíveis para "$normalizedItemName": $possibleForms');
 
       for (var form in possibleForms) {
         if (normalizedText.contains(form)) {
           // Encontrou um item do menu
           int quantity = _extractQuantity(normalizedText, form);
+          print('Item encontrado: "$form", quantidade: $quantity');
 
           result.add(PoliedroOrderItem(
             menuItem: menuItem,
@@ -405,11 +452,16 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
   }
 
   int _extractQuantity(String text, String itemName) {
+    // Imprimir para debug
+    print('Extraindo quantidade para "$itemName" do texto: "$text"');
+
     // Padrão: número seguido do nome do item
     RegExp regExp = RegExp(r'(\d+)\s*' + itemName);
     var match = regExp.firstMatch(text);
     if (match != null && match.groupCount >= 1) {
-      return int.parse(match.group(1)!);
+      int quantity = int.parse(match.group(1)!);
+      print('Quantidade encontrada via regex: $quantity');
+      return quantity;
     }
 
     // Verificar números por extenso
@@ -432,11 +484,22 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
     for (var entry in numberWords.entries) {
       if (text.contains(entry.key + ' ' + itemName) ||
           text.contains(entry.key + itemName)) {
+        print('Quantidade encontrada por extenso: ${entry.value}');
         return entry.value;
       }
     }
 
+    // Verificar se há um número no início do texto (caso comum: "3 pao")
+    RegExp startNumberRegExp = RegExp(r'^\s*(\d+)\s+');
+    var startMatch = startNumberRegExp.firstMatch(text);
+    if (startMatch != null && startMatch.groupCount >= 1) {
+      int quantity = int.parse(startMatch.group(1)!);
+      print('Quantidade encontrada no início do texto: $quantity');
+      return quantity;
+    }
+
     // Padrão não encontrado, assumir quantidade 1
+    print('Nenhum padrão de quantidade encontrado, usando padrão: 1');
     return 1;
   }
 
@@ -521,6 +584,13 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
     }
 
     buffer.writeln();
+
+    // Adicionar descrição/observações se existir
+    if (_orderDescription.isNotEmpty) {
+      buffer.writeln('Observações: $_orderDescription');
+      buffer.writeln();
+    }
+
     buffer.writeln('Total: R\$ ${total.toStringAsFixed(2)}');
 
     _addBotMessage(buffer.toString());
@@ -530,24 +600,28 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
     Future.delayed(const Duration(milliseconds: 300), () {
       if (!mounted) return;
 
-      // Criar ações para os botões
+      // Criar ações para os botões - chamando diretamente as funções corretas
       List<ChatAction> actions = [
         ChatAction(
           label: 'Confirmar',
           action: () {
-            _processUserMessage('confirmar');
+            // Chamar diretamente a função de confirmação em vez de processar texto
+            _confirmOrder();
           },
         ),
         ChatAction(
           label: 'Adicionar',
           action: () {
-            _processUserMessage('adicionar');
+            // Apenas mostrar uma mensagem para adicionar mais itens
+            _addBotMessage(
+                'O que mais você gostaria de adicionar ao seu pedido?');
           },
         ),
         ChatAction(
           label: 'Cancelar',
           action: () {
-            _processUserMessage('cancelar');
+            // Chamar diretamente a função de cancelamento em vez de processar texto
+            _cancelOrder();
           },
         ),
       ];
@@ -580,21 +654,35 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
     });
 
     try {
+      print('Iniciando confirmação do pedido...');
+
       // Obter o próximo número de pedido
       int orderNumber = await _getNextOrderNumber();
+      print('Número do pedido obtido: $orderNumber');
 
       // Calcular o total do pedido
       double total = _cart.fold(
           0, (sum, item) => sum + (item.menuItem.price * item.quantity));
+      print('Total do pedido: $total');
 
       // Obter informações do usuário
       final authProvider =
           Provider.of<ChatbotAuthProvider>(context, listen: false);
       final userEmail = authProvider.currentUser?.ra ?? '';
       final userPhone = authProvider.cachedPhone ?? '';
+      print('Informações do usuário - RA: $userEmail, Telefone: $userPhone');
 
       // Criar o pedido
       final orderId = const Uuid().v4();
+      print('ID do pedido gerado: $orderId');
+
+      // Imprimir itens do carrinho para debug
+      print('Itens no carrinho:');
+      for (var item in _cart) {
+        print(
+            '- ${item.quantity}x ${item.menuItem.name} (R\$ ${item.menuItem.price})');
+      }
+
       final order = PoliedroOrder(
         id: orderId,
         ra: userEmail,
@@ -608,9 +696,13 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
         phone: userPhone,
       );
 
+      print('Pedido criado com sucesso. Salvando no Firebase...');
+
       // Salvar o pedido
       final orderProvider = Provider.of<OrderProvider>(context, listen: false);
       await orderProvider.addOrder(order);
+
+      print('Pedido salvo com sucesso no Firebase!');
 
       if (!mounted) return;
 
@@ -620,22 +712,59 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
         _orderDescription = '';
       });
 
-      // Navegar para a tela de confirmação
-      Navigator.of(context).pushNamed(
-        '/confirmation',
-        arguments: {
-          'title': 'Pedido Confirmado!',
-          'message':
-              'Seu pedido #$orderNumber foi registrado com sucesso. Total: R\$ ${total.toStringAsFixed(2)}',
-          'buttonText': 'Voltar',
-          'onConfirm': () {
-            Navigator.of(context).pop();
-          },
-        },
-      );
+      print('Navegando para a tela de confirmação...');
 
-      // Adicionar mensagem de boas-vindas novamente após retornar da tela de confirmação
-      _addBotMessage('O que mais você gostaria de pedir hoje?');
+      // Usar Future.delayed para garantir que o setState seja concluído antes da navegação
+      Future.delayed(Duration.zero, () {
+        if (!mounted) return;
+
+        try {
+          // Usar pushNamed (não replacement) para abrir uma nova tela mantendo a pilha de navegação
+          Navigator.of(context).pushNamed(
+            '/confirmation',
+            arguments: {
+              'title': 'Pedido Confirmado!',
+              'message':
+                  'Seu pedido #$orderNumber foi registrado com sucesso. Total: R\$ ${total.toStringAsFixed(2)}',
+              'buttonText': 'Voltar',
+              'onConfirm': () {
+                // Apenas voltar para a tela anterior (chatbot)
+                Navigator.of(context).pop();
+              },
+            },
+          );
+          print('Navegação para tela de confirmação executada com sucesso');
+        } catch (navError) {
+          print('ERRO CRÍTICO NA NAVEGAÇÃO: $navError');
+          print('Stack trace da navegação: ${StackTrace.current}');
+
+          // Tentar abordagem alternativa se a primeira falhar
+          try {
+            // Tentar navegação com MaterialPageRoute explícito
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (context) => ConfirmationScreen(
+                  title: 'Pedido Confirmado!',
+                  message:
+                      'Seu pedido #$orderNumber foi registrado com sucesso. Total: R\$ ${total.toStringAsFixed(2)}',
+                  buttonText: 'Voltar',
+                  onConfirm: () {
+                    Navigator.of(context).pop();
+                  },
+                ),
+              ),
+            );
+            print('Navegação alternativa executada com sucesso');
+          } catch (secondError) {
+            print('ERRO NA NAVEGAÇÃO ALTERNATIVA: $secondError');
+
+            // Fallback final: mostrar mensagem de confirmação diretamente no chatbot
+            _addBotMessage('✅ Pedido #$orderNumber confirmado com sucesso!');
+            _addBotMessage('Total: R\$ ${total.toStringAsFixed(2)}');
+            _addBotMessage('O que mais você gostaria de pedir hoje?');
+          }
+        }
+      });
     } catch (e) {
       if (!mounted) return;
 
@@ -643,9 +772,11 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
         _isLoading = false;
       });
 
+      print('ERRO AO CONFIRMAR PEDIDO: $e');
+      print('Stack trace: ${StackTrace.current}');
+
       _addBotMessage(
           'Desculpe, ocorreu um erro ao confirmar seu pedido. Por favor, tente novamente.');
-      print('Erro ao confirmar pedido: $e');
     }
   }
 
