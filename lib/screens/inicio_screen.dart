@@ -36,10 +36,8 @@ class _InicioScreenState extends State<InicioScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        title: const Text('Poliedro Food', style: TextStyle(color: Colors.black)),
-        // Removido o botão de login do canto superior
+        title: const Text('Poliedro Food'),
+        // Mantendo o estilo do tema Poliedro
       ),
       body: SafeArea(
         child: Padding(
@@ -48,16 +46,19 @@ class _InicioScreenState extends State<InicioScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               // Top Section (Logo)
-              const Column(
+              Column(
                 children: [
-                  SizedBox(height: 40),
-                  // Placeholder for Poliedro Food Logo
+                  const SizedBox(height: 40),
+                  // Logo do Poliedro
                   Column(
                     children: [
-                      Icon(Icons.restaurant_menu,
-                          size: 80, color: Colors.orange), // Placeholder logo
-                      SizedBox(height: 16),
-                      Text(
+                      Image.asset(
+                        'lib/images/poliedro_logo.svg',
+                        height: 80,
+                        fit: BoxFit.contain,
+                      ),
+                      const SizedBox(height: 16),
+                      const Text(
                         'Poliedro Food',
                         style: TextStyle(
                             fontSize: 28, fontWeight: FontWeight.bold),
@@ -112,12 +113,9 @@ class _InicioScreenState extends State<InicioScreen> {
                           onPressed: () {
                             Navigator.pushNamed(context, '/login');
                           },
+                          // Usando o estilo do tema Poliedro
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.teal,
                             minimumSize: const Size(double.infinity, 60),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
                           ),
                           child: const Text(
                             'Fazer Login',

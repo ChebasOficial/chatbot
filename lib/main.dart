@@ -10,6 +10,7 @@ import 'package:chatbot/screens/chatbot/chatbot_screen.dart';
 import 'package:chatbot/screens/admin/admin_screen.dart';
 import 'package:chatbot/screens/kitchen/kitchen_screen.dart';
 import 'package:chatbot/utils/account_initializer.dart';
+import 'package:chatbot/config/theme.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 
@@ -39,10 +40,7 @@ class MyApp extends StatelessWidget {
       ],
       child: MaterialApp(
         title: 'Chatbot Poliedro',
-        theme: ThemeData(
-          primarySwatch: Colors.teal,
-          visualDensity: VisualDensity.adaptivePlatformDensity,
-        ),
+        theme: PoliedroTheme.lightTheme,
         initialRoute: '/',
         routes: {
           '/': (context) => const InicioScreen(),

@@ -1,96 +1,88 @@
 import 'package:flutter/material.dart';
-class AppTheme {
-  static final ThemeData lightTheme = ThemeData(
-    primaryColor: const Color(0xFF4CAF50),
-    colorScheme: ColorScheme.fromSeed(
-      seedColor: const Color(0xFF4CAF50),
-      primary: const Color(0xFF4CAF50),
-      secondary: Colors.white,
-      background: const Color(0xFFF5F5F5),
-      error: const Color(0xFFF44336),
-    ),
-    scaffoldBackgroundColor: const Color(0xFFF5F5F5),
-    fontFamily: 'Segoe UI',
-    textTheme: const TextTheme(
-      displayLarge: TextStyle(
-        fontSize: 24,
-        fontWeight: FontWeight.bold,
-        color: Color(0xFF333333),
-      ),
-      displayMedium: TextStyle(
-        fontSize: 20,
-        fontWeight: FontWeight.bold,
-        color: Color(0xFF333333),
-      ),
-      displaySmall: TextStyle(
-        fontSize: 18,
-        fontWeight: FontWeight.w600,
-        color: Color(0xFF333333),
-      ),
-      bodyLarge: TextStyle(
-        fontSize: 16,
-        color: Color(0xFF333333),
-      ),
-      bodyMedium: TextStyle(
-        fontSize: 14,
-        color: Color(0xFF333333),
-      ),
-      bodySmall: TextStyle(
-        fontSize: 12,
-        color: Color(0xFF666666),
-      ),
-    ),
-    elevatedButtonTheme: ElevatedButtonThemeData(
-      style: ElevatedButton.styleFrom(
-        backgroundColor: const Color(0xFF4CAF50),
-        foregroundColor: Colors.white,
-        padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 20),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-        ),
-        textStyle: const TextStyle(
-          fontSize: 16,
-          fontWeight: FontWeight.w500,
-        ),
-      ),
-    ),
-    inputDecorationTheme: InputDecorationTheme(
-      filled: true,
-      fillColor: Colors.white,
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
-        borderSide: const BorderSide(color: Color(0xFFDDDDDD)),
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
-        borderSide: const BorderSide(color: Color(0xFFDDDDDD)),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
-        borderSide: const BorderSide(color: Color(0xFF4CAF50), width: 2),
-      ),
-      errorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
-        borderSide: const BorderSide(color: Color(0xFFF44336)),
-      ),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 15, vertical: 15),
-      labelStyle: const TextStyle(color: Color(0xFF666666)),
-      hintStyle: const TextStyle(color: Color(0xFF999999)),
-      errorStyle: const TextStyle(color: Color(0xFFF44336), fontSize: 12),
-    ),
-    appBarTheme: const AppBarTheme(
-      backgroundColor: Color(0xFF4CAF50),
-      foregroundColor: Colors.white,
-      elevation: 0,
-      centerTitle: true,
-    ),
-    cardColor: Colors.white,
-    // Usando CardTheme como um objeto CardThemeData
-    cardTheme: CardThemeData(
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(10),
-      ),
-    ),
+
+class PoliedroTheme {
+  // Cores principais do Poliedro baseadas no site
+  static const Color poliedroGreen = Color(0xFF00A651);
+  static const Color poliedroBlue = Color(0xFF0071BC);
+  static const Color poliedroOrange = Color(0xFFF7941D);
+  static const Color poliedroPurple = Color(0xFF662D91);
+  static const Color poliedroRed = Color(0xFFED1C24);
+  
+  // Cor primária e variações
+  static const MaterialColor primarySwatch = MaterialColor(
+    0xFF00A651, // Verde Poliedro como cor primária
+    <int, Color>{
+      50: Color(0xFFE0F7EA),
+      100: Color(0xFFB3EAD1),
+      200: Color(0xFF80DCB5),
+      300: Color(0xFF4DCE99),
+      400: Color(0xFF26C485),
+      500: Color(0xFF00A651), // Cor base
+      600: Color(0xFF009E4A),
+      700: Color(0xFF009540),
+      800: Color(0xFF008B37),
+      900: Color(0xFF007B27),
+    },
   );
+
+  // Tema claro
+  static ThemeData get lightTheme {
+    return ThemeData(
+      primarySwatch: primarySwatch,
+      primaryColor: poliedroGreen,
+      hintColor: poliedroBlue,
+      scaffoldBackgroundColor: Colors.white,
+      appBarTheme: const AppBarTheme(
+        backgroundColor: poliedroGreen,
+        elevation: 0,
+        iconTheme: IconThemeData(color: Colors.white),
+        titleTextStyle: TextStyle(
+          color: Colors.white,
+          fontSize: 20,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: poliedroOrange,
+          foregroundColor: Colors.white,
+          minimumSize: const Size(double.infinity, 50),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+          textStyle: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          foregroundColor: poliedroBlue,
+          textStyle: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: Colors.grey[100],
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide.none,
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: poliedroGreen, width: 2),
+        ),
+      ),
+      colorScheme: ColorScheme.light(
+        primary: poliedroGreen,
+        secondary: poliedroOrange,
+        tertiary: poliedroBlue,
+        error: poliedroRed,
+      ),
+    );
+  }
 }

@@ -29,6 +29,7 @@ class _AdminScreenState extends State<AdminScreen> with SingleTickerProviderStat
     return Scaffold(
       appBar: AppBar(
         title: const Text('Painel Administrativo'),
+        automaticallyImplyLeading: false, // Remove o botão de voltar
         bottom: TabBar(
           controller: _tabController,
           tabs: const [
