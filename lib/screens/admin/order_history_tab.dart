@@ -14,10 +14,8 @@ class _OrderHistoryTabState extends State<OrderHistoryTab> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final TextEditingController _filterController = TextEditingController();
   bool _isLoading = false;
-  List<Map<String, dynamic>> _allOrders =
-      []; // Lista com todos os pedidos carregados
-  List<Map<String, dynamic>> _filteredOrders =
-      []; // Lista filtrada para exibição
+  List<Map<String, dynamic>> _allOrders = []; // Lista com todos os pedidos carregados
+  List<Map<String, dynamic>> _filteredOrders = []; // Lista filtrada para exibição
   String _filterText = "";
 
   @override
@@ -89,39 +87,32 @@ class _OrderHistoryTabState extends State<OrderHistoryTab> {
           .get();
 
       print('Encontrados ${snapshot.docs.length} pedidos no Firestore');
-
+      
+      // Já ordenados pelo Firestore, mas garantimos a ordenação explícita
       final orders = snapshot.docs.map((doc) {
         final data = doc.data();
-        print(
-            'Processando pedido ${doc.id}: ${data.toString().substring(0, min(100, data.toString().length))}...');
-
+        print('Processando pedido ${doc.id}: ${data.toString().substring(0, min(100, data.toString().length))}...');
+        
         // Tratamento de nulos e tipos para todos os campos relevantes
-        final orderNumber =
-            _parseOrderNumber(data['orderNumber']); // Usar função segura
-        final userEmail = (data['ra'] as String?) ??
-            (data['userEmail'] as String?) ??
-            ''; // Tentar ambos os campos
+        final orderNumber = _parseOrderNumber(data['orderNumber']); // Usar função segura
+        final userEmail = (data['ra'] as String?) ?? (data['userEmail'] as String?) ?? ''; // Tentar ambos os campos
         final timestampData = data['timestamp']; // Obter o timestamp sem cast
-        final DateTime dateTime =
-            _parseTimestamp(timestampData); // Converter com segurança
+        final DateTime dateTime = _parseTimestamp(timestampData); // Converter com segurança
         final itemsData = (data['items'] as List<dynamic>?) ?? [];
         final total = (data['total'] as num?)?.toDouble() ?? 0.0;
         final status = data['status'] as String? ?? 'pending';
-        final notes = (data['notes'] as String?) ??
-            (data['description'] as String?) ??
-            ''; // Tentar ambos os campos
-
+        final notes = (data['notes'] as String?) ?? (data['description'] as String?) ?? ''; // Tentar ambos os campos
+        
         // Mapear itens com tratamento de nulos interno e estrutura aninhada
         final items = itemsData.map((itemData) {
           final itemMap = itemData as Map<String, dynamic>? ?? {};
           final quantity = itemMap['quantity'] as int? ?? 0;
-
+          
           // Verificar se existe o objeto menuItem aninhado
-          final menuItemMap =
-              itemMap['menuItem'] as Map<String, dynamic>? ?? {};
+          final menuItemMap = itemMap['menuItem'] as Map<String, dynamic>? ?? {};
           final name = (menuItemMap['name'] as String?) ?? 'Item desconhecido';
           final price = (menuItemMap['price'] as num?)?.toDouble() ?? 0.0;
-
+          
           return {
             'name': name,
             'quantity': quantity,
@@ -129,8 +120,7 @@ class _OrderHistoryTabState extends State<OrderHistoryTab> {
           };
         }).toList();
 
-        print(
-            'Pedido processado: #$orderNumber, status: $status, items: ${items.length}');
+        print('Pedido processado: #$orderNumber, status: $status, items: ${items.length}');
 
         return {
           'id': doc.id,
@@ -179,6 +169,15 @@ class _OrderHistoryTabState extends State<OrderHistoryTab> {
         return ra.toLowerCase().contains(_filterText.toLowerCase());
       }).toList();
     }
+    
+    // Garantir que os pedidos estejam sempre ordenados por timestamp (mais recentes primeiro)
+    _filteredOrders.sort((a, b) {
+      final DateTime timeA = a['timestamp'] as DateTime;
+      final DateTime timeB = b['timestamp'] as DateTime;
+      return timeB.compareTo(timeA); // Ordem descendente (mais recentes primeiro)
+    });
+    
+    print('Pedidos ordenados por timestamp (descendente): ${_filteredOrders.length} pedidos');
   }
 
   // Função segura para extrair RA do email
@@ -231,28 +230,20 @@ class _OrderHistoryTabState extends State<OrderHistoryTab> {
                           ),
                         )
                       : ListView.builder(
-                          padding: const EdgeInsets.only(
-                              left: 16.0, right: 16.0, bottom: 16.0),
+                          padding: const EdgeInsets.only(left: 16.0, right: 16.0, bottom: 16.0),
                           itemCount: _filteredOrders.length,
                           itemBuilder: (context, index) {
                             final order = _filteredOrders[index];
 
                             // Acessar dados com segurança usando valores padrão definidos no _loadOrders
-                            final orderNumber =
-                                order['orderNumber'] as int; // Já tratado
-                            final dateTime = order['timestamp']
-                                as DateTime; // Já convertido para DateTime
-                            final formattedDate =
-                                DateFormat('dd/MM/yyyy HH:mm').format(dateTime);
-                            final email =
-                                order['userEmail'] as String; // Já tratado
+                            final orderNumber = order['orderNumber'] as int; // Já tratado
+                            final dateTime = order['timestamp'] as DateTime; // Já convertido para DateTime
+                            final formattedDate = DateFormat('dd/MM/yyyy HH:mm').format(dateTime);
+                            final email = order['userEmail'] as String; // Já tratado
                             final ra = _extractRA(email);
-                            final items = order['items']
-                                as List<Map<String, dynamic>>; // Já tratado
-                            final total =
-                                order['total'] as double; // Já tratado
-                            final description =
-                                order['notes'] as String; // Já tratado
+                            final items = order['items'] as List<Map<String, dynamic>>; // Já tratado
+                            final total = order['total'] as double; // Já tratado
+                            final description = order['notes'] as String; // Já tratado
 
                             return Card(
                               margin: const EdgeInsets.only(bottom: 16.0),
@@ -262,8 +253,7 @@ class _OrderHistoryTabState extends State<OrderHistoryTab> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceBetween,
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                       children: [
                                         Text(
                                           // Formatar número do pedido
@@ -298,27 +288,19 @@ class _OrderHistoryTabState extends State<OrderHistoryTab> {
                                     const SizedBox(height: 8.0),
                                     ...items.map((item) {
                                       // Acessar dados do item com segurança
-                                      final name =
-                                          item['name'] as String; // Já tratado
-                                      final quantity =
-                                          item['quantity'] as int; // Já tratado
-                                      final price =
-                                          item['price'] as double; // Já tratado
+                                      final name = item['name'] as String; // Já tratado
+                                      final quantity = item['quantity'] as int; // Já tratado
+                                      final price = item['price'] as double; // Já tratado
                                       final itemTotal = price * quantity;
 
                                       return Padding(
-                                        padding:
-                                            const EdgeInsets.only(bottom: 4.0),
+                                        padding: const EdgeInsets.only(bottom: 4.0),
                                         child: Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.spaceBetween,
+                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                           children: [
-                                            Expanded(
-                                                child:
-                                                    Text('$quantity x $name')),
+                                            Expanded(child: Text('$quantity x $name')),
                                             const SizedBox(width: 8),
-                                            Text(
-                                                'R\$ ${itemTotal.toStringAsFixed(2)}'),
+                                            Text('R\$ ${itemTotal.toStringAsFixed(2)}'),
                                           ],
                                         ),
                                       );
@@ -326,14 +308,12 @@ class _OrderHistoryTabState extends State<OrderHistoryTab> {
                                     // Exibir descrição se houver
                                     if (description.isNotEmpty)
                                       Padding(
-                                        padding:
-                                            const EdgeInsets.only(top: 8.0),
+                                        padding: const EdgeInsets.only(top: 8.0),
                                         child: Text('Observação: $description'),
                                       ),
                                     const Divider(),
                                     Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceBetween,
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                       children: [
                                         const Text(
                                           'Total:',
@@ -362,3 +342,4 @@ class _OrderHistoryTabState extends State<OrderHistoryTab> {
     );
   }
 }
+
