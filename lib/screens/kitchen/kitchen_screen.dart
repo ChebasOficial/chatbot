@@ -1,3 +1,4 @@
+import 'package:chatbot/models/order_status.dart';
 import 'package:flutter/material.dart';
 import 'package:chatbot/config/style_guide.dart';
 import 'package:chatbot/models/order.dart';
@@ -43,7 +44,7 @@ class _KitchenScreenState extends State<KitchenScreen> {
 
     try {
       final orderProvider = Provider.of<OrderProvider>(context, listen: false);
-      
+
       // Verificar se o usuário da cozinha está autenticado
       if (!orderProvider.isKitchenAuthenticated) {
         setState(() {
@@ -53,17 +54,18 @@ class _KitchenScreenState extends State<KitchenScreen> {
         // Optionally show a message
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('Erro: Usuário da cozinha não está autenticado.'),
+            content:
+                const Text('Erro: Usuário da cozinha não está autenticado.'),
             backgroundColor: PoliedroFoodStyle.errorRed,
           ),
         );
       }
       // Cancel any existing subscription just in case
       _ordersSubscription?.cancel();
-      
+
       // Get the stream of orders
       _ordersStream = orderProvider.getOrdersStream();
-      
+
       // Subscribe to the stream
       _ordersSubscription = _ordersStream?.listen((orders) {
         if (mounted) {
@@ -106,13 +108,24 @@ class _KitchenScreenState extends State<KitchenScreen> {
   }
 
   Future<void> _confirmOrder(int index) async {
-    if (index < 0 || index >= _orders.length) return;
-    
-    final order = _orders[index];
+    // Usar a lista filtrada de pedidos pendentes
+    final pendingOrders = _orders
+        .where((order) => order.status == OrderStatus.pending.value)
+        .toList();
+    if (index < 0 || index >= pendingOrders.length) return;
+
+    final order = pendingOrders[index];
     final orderProvider = Provider.of<OrderProvider>(context, listen: false);
-    
+
     try {
+      print('Confirmando pedido ${order.id} com status atual: ${order.status}');
       await orderProvider.confirmOrder(order.id);
+
+      // Forçar atualização da lista após confirmação
+      setState(() {
+        // A lista será atualizada automaticamente pelo stream
+      });
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -136,6 +149,11 @@ class _KitchenScreenState extends State<KitchenScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Filtrar apenas pedidos pendentes
+    final pendingOrders = _orders
+        .where((order) => order.status == OrderStatus.pending.value)
+        .toList();
+
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: false, // Remove a seta de voltar
@@ -156,13 +174,13 @@ class _KitchenScreenState extends State<KitchenScreen> {
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : _orders.isEmpty
+          : pendingOrders.isEmpty
               ? const Center(child: Text('Nenhum pedido pendente.'))
               : ListView.builder(
                   padding: const EdgeInsets.all(8.0),
-                  itemCount: _orders.length,
+                  itemCount: pendingOrders.length,
                   itemBuilder: (context, index) {
-                    final order = _orders[index];
+                    final order = pendingOrders[index];
                     return _buildOrderCard(order, index);
                   },
                 ),
@@ -202,12 +220,14 @@ class _KitchenScreenState extends State<KitchenScreen> {
               ],
             ),
             const SizedBox(height: 8.0),
-            
+
             // Informações do cliente
-            Text('RA: ${order.user.ra}', style: const TextStyle(fontWeight: FontWeight.bold)),
-            if (order.user.phone.isNotEmpty) Text('Telefone: ${order.user.phone}'),
+            Text('RA: ${order.user.ra}',
+                style: const TextStyle(fontWeight: FontWeight.bold)),
+            if (order.user.phone.isNotEmpty)
+              Text('Telefone: ${order.user.phone}'),
             const Divider(),
-            
+
             // Descrição/Observações
             if (order.notes.isNotEmpty) ...[
               Text(
@@ -217,7 +237,7 @@ class _KitchenScreenState extends State<KitchenScreen> {
               Text(order.notes),
               const Divider(),
             ],
-            
+
             // Lista de itens
             Text(
               'Itens:',
@@ -240,7 +260,7 @@ class _KitchenScreenState extends State<KitchenScreen> {
               );
             }).toList(),
             const Divider(),
-            
+
             // Total
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -256,7 +276,7 @@ class _KitchenScreenState extends State<KitchenScreen> {
               ],
             ),
             const SizedBox(height: 16.0),
-            
+
             // Botão de confirmar
             Align(
               alignment: Alignment.center,
@@ -279,7 +299,7 @@ class _KitchenScreenState extends State<KitchenScreen> {
       ),
     );
   }
-  
+
   // Mantido para compatibilidade, mas não usado mais diretamente
   Widget _buildOrderDetails(PoliedroOrder order) {
     return Container(); // Método vazio, não usado mais

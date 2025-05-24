@@ -9,6 +9,7 @@ import 'package:chatbot/screens/login/admin_login_screen.dart';
 import 'package:chatbot/screens/chatbot/chatbot_screen.dart';
 import 'package:chatbot/screens/admin/admin_screen.dart';
 import 'package:chatbot/screens/kitchen/kitchen_screen.dart';
+import 'package:chatbot/screens/confirmation_screen.dart';
 import 'package:chatbot/utils/account_initializer.dart';
 import 'package:chatbot/config/theme.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -110,6 +111,19 @@ class _MyAppState extends State<MyApp> {
           '/chatbot': (context) => const ChatbotScreen(),
           '/admin': (context) => const AdminScreen(),
           '/kitchen': (context) => const KitchenScreen(),
+          '/confirmation': (context) {
+            // Obter argumentos da navegação, se disponíveis
+            final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+            
+            // Usar valores dos argumentos ou valores padrão
+            return ConfirmationScreen(
+              title: args?['title'] ?? 'Pedido Confirmado!',
+              message: args?['message'] ?? 'Seu pedido foi registrado com sucesso.',
+              buttonText: args?['buttonText'] ?? 'Voltar',
+              onConfirm: args?['onConfirm'] as VoidCallback? ?? 
+                         (() => Navigator.of(context).pushReplacementNamed('/chatbot')),
+            );
+          },
         },
       ),
     );
