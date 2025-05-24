@@ -1,15 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
-import 'package:firebase_auth/firebase_auth.dart'
-    as firebase_auth; // Importar FirebaseAuth
+import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:chatbot/providers/auth_provider.dart';
 import 'package:chatbot/models/menu_item.dart';
 import 'package:chatbot/models/chat_message.dart';
 import 'package:chatbot/screens/confirmation_screen.dart';
-// import 'package:chatbot/providers/counter_provider.dart'; // CounterProvider não é usado neste arquivo
 import 'package:intl/intl.dart';
-import 'package:string_similarity/string_similarity.dart'; // Para comparação flexível
+import 'package:string_similarity/string_similarity.dart';
+// import 'dart:math'; // Removido - não usaremos número aleatório
 
 class ChatbotScreen extends StatefulWidget {
   const ChatbotScreen({Key? key}) : super(key: key);
@@ -20,8 +19,7 @@ class ChatbotScreen extends StatefulWidget {
 
 class _ChatbotScreenState extends State<ChatbotScreen> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final firebase_auth.FirebaseAuth _auth =
-      firebase_auth.FirebaseAuth.instance; // Declarar instância do FirebaseAuth
+  final firebase_auth.FirebaseAuth _auth = firebase_auth.FirebaseAuth.instance;
   final TextEditingController _textController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   List<ChatMessage> _messages = [];
@@ -30,8 +28,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
   double _cartTotal = 0.0;
   bool _isLoading = false;
   bool _waitingForDescription = false;
-  // Usar Lista para descrições
-  List<String> _orderDescriptions = [];
+  String _orderDescription = ''; // Descrição única
 
   // Mapa para mapear números por extenso para dígitos
   final Map<String, int> _numberWords = {
@@ -45,7 +42,16 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
     'oito': 8,
     'nove': 9,
     'dez': 10,
-    // Adicione mais se necessário
+    'onze': 11,
+    'doze': 12,
+    'treze': 13,
+    'quatorze': 14, 'catorze': 14,
+    'quinze': 15,
+    'dezesseis': 16, 'dezasseis': 16,
+    'dezessete': 17, 'dezassete': 17,
+    'dezoito': 18,
+    'dezenove': 19, 'dezanove': 19,
+    'vinte': 20,
   };
 
   // Mapa para plurais irregulares comuns de alimentos (normalizados)
@@ -64,7 +70,16 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
     'mel': 'meis', // mel -> méis (ou meles)
     'alcool': 'alcoois', // álcool -> álcoois
     'barril': 'barris', // barril -> barris (ex: barril de chopp)
-    // Adicione outros aqui conforme necessário
+    'cafe': 'cafes', // café -> cafés
+    'sanduiche': 'sanduiches', // sanduíche -> sanduíches
+    'hamburguer': 'hamburgueres', // hambúrguer -> hambúrgueres
+    'salgado': 'salgados', // salgado -> salgados
+    'refrigerante': 'refrigerantes', // refrigerante -> refrigerantes
+    'suco': 'sucos', // suco -> sucos
+    'agua': 'aguas', // água -> águas
+    'sobremesa': 'sobremesas', // sobremesa -> sobremesas
+    'doce': 'doces', // doce -> doces
+    'salada': 'saladas', // salada -> saladas
   };
 
   // Palavras-chave que indicam uma descrição/comentário
@@ -81,25 +96,40 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
     'sem cebola',
     'sem picles',
     'com gelo',
-    'sem gelo'
-    // Adicione outras palavras/frases comuns de descrição aqui
+    'sem gelo',
+    'quente',
+    'frio',
+    'gelado',
+    'temperatura ambiente',
+    'adicional',
+    'adicionar',
+    'retirar',
+    'tirar',
+    'colocar',
+    'pouco',
+    'muito',
+    'bastante',
+    'médio',
+    'medio',
+    'grande',
+    'pequeno',
+    'observacao', // Adicionado
+    'descricao' // Adicionado
   ];
 
   // Palavras-chave que indicam incremento
-  final List<String> _incrementKeywords = ['mais', 'outro', 'outra'];
+  final List<String> _incrementKeywords = ['mais', 'outro', 'outra', 'adicionar', 'adiciona', 'coloca', 'colocar'];
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final authProvider =
-          Provider.of<ChatbotAuthProvider>(context, listen: false);
+      final authProvider = Provider.of<ChatbotAuthProvider>(context, listen: false);
       if (!authProvider.isLoggedIn) {
         Navigator.pushReplacementNamed(context, '/login');
         return;
       }
-      _addBotMessage(
-          'Olá! Bem-vindo ao chatbot da cantina. Como posso ajudar?');
+      _addBotMessage('Olá! Bem-vindo ao chatbot da cantina. Como posso ajudar?');
       _loadMenuItems();
     });
   }
@@ -130,8 +160,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
       });
     } catch (e) {
       print('Erro ao carregar itens do cardápio: $e');
-      _addBotMessage(
-          'Desculpe, não consegui carregar o cardápio. Por favor, tente novamente mais tarde.');
+      _addBotMessage('Desculpe, não consegui carregar o cardápio. Por favor, tente novamente mais tarde.');
     }
   }
 
@@ -181,14 +210,26 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
     normalized = normalized
         .replaceAll('á', 'a')
         .replaceAll('â', 'a')
-        .replaceAll('ã', 'a');
-    normalized = normalized.replaceAll('é', 'e').replaceAll('ê', 'e');
-    normalized = normalized.replaceAll('í', 'i');
+        .replaceAll('ã', 'a')
+        .replaceAll('à', 'a');
+    normalized = normalized
+        .replaceAll('é', 'e')
+        .replaceAll('ê', 'e')
+        .replaceAll('è', 'e');
+    normalized = normalized
+        .replaceAll('í', 'i')
+        .replaceAll('î', 'i')
+        .replaceAll('ì', 'i');
     normalized = normalized
         .replaceAll('ó', 'o')
         .replaceAll('ô', 'o')
-        .replaceAll('õ', 'o');
-    normalized = normalized.replaceAll('ú', 'u').replaceAll('ü', 'u');
+        .replaceAll('õ', 'o')
+        .replaceAll('ò', 'o');
+    normalized = normalized
+        .replaceAll('ú', 'u')
+        .replaceAll('û', 'u')
+        .replaceAll('ü', 'u')
+        .replaceAll('ù', 'u');
     normalized = normalized.replaceAll('ç', 'c');
     normalized = normalized.replaceAll(RegExp(r'[.,!?;:]'), '');
     return normalized.trim();
@@ -202,13 +243,11 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
       return singularNormalized + 's';
     }
     if (singularNormalized.endsWith('l'))
-      return singularNormalized.substring(0, singularNormalized.length - 1) +
-          'is';
+      return singularNormalized.substring(0, singularNormalized.length - 1) + 'is';
     if (singularNormalized.endsWith('r') || singularNormalized.endsWith('z'))
       return singularNormalized + 'es';
     if (singularNormalized.endsWith('m'))
-      return singularNormalized.substring(0, singularNormalized.length - 1) +
-          'ns';
+      return singularNormalized.substring(0, singularNormalized.length - 1) + 'ns';
     if (singularNormalized.endsWith('s') && singularNormalized.length > 3)
       return singularNormalized;
     if (singularNormalized.endsWith('s')) return singularNormalized + 'es';
@@ -219,7 +258,6 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
     final normalizedText = _normalizeText(originalText);
 
     if (_waitingForDescription) {
-      // NOVO: Adicionar verificação para "cancelar"
       if (normalizedText == 'cancelar') {
         _waitingForDescription = false;
         _addBotMessage('Ação cancelada. Voltando ao resumo do pedido.');
@@ -227,20 +265,16 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
         return;
       }
 
-      if (normalizedText.contains('confirmar')) {
-        _confirmOrder();
+      // Atualiza a descrição única
+      String oldDescription = _orderDescription;
+      _orderDescription = originalText.trim();
+      _waitingForDescription = false;
+      if (oldDescription.isEmpty) {
+        _addBotMessage('Descrição "$_orderDescription" adicionada.');
       } else {
-        String newDescription = originalText.trim();
-        if (!_orderDescriptions.any(
-            (desc) => _normalizeText(desc) == _normalizeText(newDescription))) {
-          _orderDescriptions.add(newDescription);
-          _addBotMessage('Descrição "$newDescription" adicionada.');
-        } else {
-          _addBotMessage('Essa descrição já existe.');
-        }
-        _waitingForDescription = false;
-        _showOrderSummary();
+        _addBotMessage('Descrição alterada de "$oldDescription" para "$_orderDescription".');
       }
+      _showOrderSummary();
       return;
     }
 
@@ -249,25 +283,25 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
       return;
     }
 
-    // NOVO: Verificar comando de edição de descrição
+    // Verificar comando de REMOVER descrição
+    if (_isRemoveDescriptionCommand(normalizedText)) {
+      _processRemoveDescriptionCommand();
+      return;
+    }
+
+    // Verificar comando de EDITAR descrição (substituir)
     if (_isEditDescriptionCommand(normalizedText)) {
       _processEditDescriptionCommand(originalText);
       return;
     }
 
-    // NOVO: Verificar comando de exclusão de descrição
-    if (_isDeleteDescriptionCommand(normalizedText)) {
-      _processDeleteDescriptionCommand(originalText);
-      return;
-    }
-
+    // Verificar se é pedido ou adição de descrição
     if (_isPotentiallyOrderOrDescription(normalizedText)) {
       _processOrderOrDescriptionRequest(originalText);
       return;
     }
 
-    if (normalizedText.contains('cardapio') ||
-        normalizedText.contains('menu')) {
+    if (normalizedText.contains('cardapio') || normalizedText.contains('menu')) {
       _showMenuItems();
       return;
     }
@@ -275,106 +309,138 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
     _handleUnclearMessage();
   }
 
-  // NOVO: Função para verificar se é comando de edição
+  // Função para verificar se é comando de REMOVER descrição
+  bool _isRemoveDescriptionCommand(String normalizedText) {
+    final removeKeywords = ['remover', 'tirar', 'excluir', 'apagar', 'deletar', 'limpar'];
+    final descriptionWords = ['descricao', 'descrição', 'observacao', 'observação'];
+    // Padrão: (remover|tirar|...) (descrição|observação)
+    final regex = RegExp(r'^(' +
+        removeKeywords.join('|') +
+        r')\s+(' +
+        descriptionWords.join('|') +
+        r')$');
+    // Padrão alternativo: (remover|tirar|...) descricao
+    final altRegex = RegExp(r'^(' + removeKeywords.join('|') + r')$');
+
+    // Só considera se já existe uma descrição
+    return _orderDescription.isNotEmpty && (regex.hasMatch(normalizedText) || altRegex.hasMatch(normalizedText));
+  }
+
+  // Função para processar comando de REMOVER descrição
+  void _processRemoveDescriptionCommand() {
+    String removedDescription = _orderDescription;
+    _orderDescription = '';
+    _addBotMessage('Descrição "$removedDescription" removida.');
+    _showOrderSummary();
+  }
+
+  // Função para verificar se é comando de EDITAR descrição (substituir)
   bool _isEditDescriptionCommand(String normalizedText) {
     final editKeywords = ['mudar', 'alterar', 'trocar', 'editar'];
-    final descriptionKeywords = [
-      'descrição',
-      'descricao',
-      'observação',
-      'observacao'
-    ];
+    final descriptionWords = ['descrição', 'descricao', 'observação', 'observacao'];
     final paraKeywords = ['para', 'por'];
 
-    // Padrão: (mudar|alterar|...) (descrição|observação|...) [número] (para|por) [novo texto]
+    // Padrão: (mudar|alterar|...) (descrição|observação) (para|por) [novo texto]
     final regex = RegExp(r'^(' +
         editKeywords.join('|') +
         r')\s+(' +
-        descriptionKeywords.join('|') +
-        r')\s+(\d+)\s+(' +
+        descriptionWords.join('|') +
+        r')\s+(' +
         paraKeywords.join('|') +
         r')\s+(.+)$');
-    return regex.hasMatch(normalizedText);
+
+    // Padrão alternativo: (editar|mudar|...) (para|por) [novo texto]
+    final altRegex = RegExp(r'^(' +
+        editKeywords.join('|') +
+        r')\s+(' +
+        paraKeywords.join('|') +
+        r')\s+(.+)$');
+
+    // Só considera se já existe uma descrição para editar
+    return _orderDescription.isNotEmpty && (regex.hasMatch(normalizedText) || altRegex.hasMatch(normalizedText));
   }
 
-  // NOVO: Função para processar comando de edição
+  // Função para processar comando de EDITAR descrição (substituir)
   void _processEditDescriptionCommand(String originalText) {
     final normalizedText = _normalizeText(originalText);
     final editKeywords = ['mudar', 'alterar', 'trocar', 'editar'];
-    final descriptionKeywords = [
-      'descrição',
-      'descricao',
-      'observação',
-      'observacao'
-    ];
+    final descriptionWords = ['descrição', 'descricao', 'observação', 'observacao'];
     final paraKeywords = ['para', 'por'];
 
+    // Padrão completo
     final regex = RegExp(r'^(' +
         editKeywords.join('|') +
         r')\s+(' +
-        descriptionKeywords.join('|') +
-        r')\s+(\d+)\s+(' +
+        descriptionWords.join('|') +
+        r')\s+(' +
         paraKeywords.join('|') +
         r')\s+(.+)$');
 
-    final match = regex.firstMatch(normalizedText);
-    if (match != null && match.groupCount >= 5) {
-      final indexStr = match.group(3);
-      final newDescriptionPart = match.group(5);
+    // Padrão alternativo
+    final altRegex = RegExp(r'^(' +
+        editKeywords.join('|') +
+        r')\s+(' +
+        paraKeywords.join('|') +
+        r')\s+(.+)$');
 
-      if (indexStr != null && newDescriptionPart != null) {
-        final index = int.tryParse(indexStr);
-        // Extrair a nova descrição do texto original para manter a capitalização
-        final originalMatch = RegExp(
-                r'^(?:' +
-                    editKeywords.join('|') +
-                    r')\s+(?:' +
-                    descriptionKeywords.join('|') +
-                    r')\s+' +
-                    indexStr +
-                    r'\s+(?:' +
-                    paraKeywords.join('|') +
-                    r')\s+(.+)$',
-                caseSensitive: false)
-            .firstMatch(originalText);
+    var match = regex.firstMatch(normalizedText);
+    String? newDescriptionPart;
 
-        final newDescription =
-            originalMatch?.group(1)?.trim() ?? newDescriptionPart.trim();
-
-        if (index != null && index > 0 && index <= _orderDescriptions.length) {
-          final oldDescription = _orderDescriptions[index - 1];
-          _orderDescriptions[index - 1] = newDescription;
-          _addBotMessage(
-              'Descrição ${index} alterada de "$oldDescription" para "$newDescription".');
-          _showOrderSummary();
-        } else {
-          _addBotMessage(
-              'Número de descrição inválido. Por favor, informe um número entre 1 e ${_orderDescriptions.length}.');
-        }
-      } else {
-        _addBotMessage(
-            'Não consegui entender qual descrição mudar ou qual o novo texto. Use o formato: "mudar descrição [número] para [novo texto]".');
-      }
+    if (match != null && match.groupCount >= 4) {
+      newDescriptionPart = match.group(4);
     } else {
-      _addBotMessage(
-          'Não consegui entender o comando de mudança de descrição. Use o formato: "mudar descrição [número] para [novo texto]".');
+      match = altRegex.firstMatch(normalizedText);
+      if (match != null && match.groupCount >= 3) {
+        newDescriptionPart = match.group(3);
+      }
+    }
+
+    if (newDescriptionPart != null) {
+      // Extrair a nova descrição do texto original para manter a capitalização
+      String? newDescription;
+      if (regex.hasMatch(normalizedText)) {
+        final originalMatch = RegExp(
+          r'^(?:' + editKeywords.join('|') + r')\s+(?:' +
+          descriptionWords.join('|') + r')\s+(?:' + paraKeywords.join('|') + r')\s+(.+)$',
+          caseSensitive: false
+        ).firstMatch(originalText);
+        newDescription = originalMatch?.group(1)?.trim();
+      } else {
+         final originalMatch = RegExp(
+          r'^(?:' + editKeywords.join('|') + r')\s+(?:' + paraKeywords.join('|') + r')\s+(.+)$',
+          caseSensitive: false
+        ).firstMatch(originalText);
+        newDescription = originalMatch?.group(1)?.trim();
+      }
+
+      if (newDescription == null || newDescription.isEmpty) {
+         _addBotMessage('Não consegui identificar a nova descrição. Por favor, tente novamente.');
+         _showOrderSummary(showButtons: false);
+         return;
+      }
+
+      String oldDescription = _orderDescription;
+      _orderDescription = newDescription;
+      _addBotMessage('Descrição alterada de "$oldDescription" para "$_orderDescription".');
+      _showOrderSummary();
+    } else {
+      _addBotMessage('Não consegui entender o comando de mudança de descrição. Use o formato: "editar descrição para [novo texto]".');
+      _showOrderSummary(showButtons: false);
     }
   }
 
+
   void _showMenuItems() {
     if (_menuItems.isEmpty) {
-      _addBotMessage(
-          'Estou carregando o cardápio. Por favor, aguarde um momento e tente novamente.');
+      _addBotMessage('Estou carregando o cardápio. Por favor, aguarde um momento e tente novamente.');
       _loadMenuItems();
       return;
     }
     String menuText = 'Aqui está nosso cardápio:\n\n';
     for (var item in _menuItems) {
-      menuText +=
-          '${item.name} - R\$ ${item.price.toStringAsFixed(2)}\n${item.description}\n\n';
+      menuText += '${item.name} - R\$ ${item.price.toStringAsFixed(2)}\n${item.description}\n\n';
     }
-    menuText +=
-        'Para fazer um pedido, basta digitar o nome do item e a quantidade desejada. Por exemplo: "Quero 2 hambúrgueres".\nVocê também pode adicionar observações, como "com maionese extra".';
+    menuText += 'Para fazer um pedido, basta digitar o nome do item e a quantidade desejada. Por exemplo: "Quero 2 hambúrgueres".\nVocê também pode adicionar uma observação, como "com maionese extra".';
     _addBotMessage(menuText);
   }
 
@@ -390,6 +456,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
       'adiciona',
       'incluir',
       'coloca',
+      'colocar',
       'poe',
       'põe',
       'me ve',
@@ -400,34 +467,30 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
 
     // Incluir palavras de incremento como potenciais pedidos
     if (orderKeywords.any((keyword) => normalizedText.contains(keyword)) ||
-        _incrementKeywords
-            .any((keyword) => normalizedText.startsWith(keyword))) {
+        _incrementKeywords.any((keyword) => normalizedText.startsWith(keyword))) {
       return true;
     }
 
     for (var item in _menuItems) {
       final normalizedSingular = _normalizeText(item.name);
       final normalizedPlural = _getPluralForm(normalizedSingular);
-      if (RegExp('\b' + RegExp.escape(normalizedSingular) + '\b')
-              .hasMatch(normalizedText) ||
-          RegExp('\b' + RegExp.escape(normalizedPlural) + '\b')
-              .hasMatch(normalizedText)) {
+      if (RegExp('\\b' + RegExp.escape(normalizedSingular) + '\\b').hasMatch(normalizedText) ||
+          RegExp('\\b' + RegExp.escape(normalizedPlural) + '\\b').hasMatch(normalizedText)) {
         return true;
       }
     }
 
+    // Verifica se a frase contém palavras-chave de descrição E já existe um pedido em andamento
     if (_cartItems.isNotEmpty) {
       for (var keyword in _descriptionKeywords) {
-        bool partOfItemName = _menuItems
-            .any((item) => _normalizeText(item.name).contains(keyword));
+        bool partOfItemName = _menuItems.any((item) => _normalizeText(item.name).contains(keyword));
         if (normalizedText.contains(keyword) && !partOfItemName) {
           return true;
         }
       }
     }
 
-    final numberItemRegex =
-        RegExp(r'^(\d+|' + _numberWords.keys.join('|') + r')\s+([\w\s]+)$');
+    final numberItemRegex = RegExp(r'^(\d+|' + _numberWords.keys.join('|') + r')\s+([\w\s]+)$');
     if (numberItemRegex.hasMatch(normalizedText)) {
       final match = numberItemRegex.firstMatch(normalizedText);
       if (match != null && match.groupCount >= 2) {
@@ -435,8 +498,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
         for (var item in _menuItems) {
           final normalizedSingular = _normalizeText(item.name);
           final normalizedPlural = _getPluralForm(normalizedSingular);
-          if (itemNamePart == normalizedSingular ||
-              itemNamePart == normalizedPlural) {
+          if (itemNamePart == normalizedSingular || itemNamePart == normalizedPlural) {
             return true;
           }
         }
@@ -455,92 +517,50 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
 
     // Verifica se começa com palavra de incremento (ex: "mais 1 pao")
     for (var incKeyword in _incrementKeywords) {
-      final incRegex = RegExp(r'^' +
-          incKeyword +
-          r'\s+(\d+)\s+(?:' +
-          escapedSingular +
-          r'|' +
-          escapedPlural +
-          r')\b');
+      final incRegex = RegExp(r'^' + incKeyword + r'\s+(\d+)\s+(?:' + escapedSingular + r'|' + escapedPlural + r')\b');
       var incMatch = incRegex.firstMatch(normalizedText);
       if (incMatch != null) return int.tryParse(incMatch.group(1) ?? '1') ?? 1;
 
       for (var entry in _numberWords.entries) {
-        final incRegexWord = RegExp(r'^' +
-            incKeyword +
-            r'\s+' +
-            entry.key +
-            r'\s+(?:' +
-            escapedSingular +
-            r'|' +
-            escapedPlural +
-            r')\b');
+        final incRegexWord = RegExp(r'^' + incKeyword + r'\s+' + entry.key + r'\s+(?:' + escapedSingular + r'|' + escapedPlural + r')\b');
         if (incRegexWord.hasMatch(normalizedText)) return entry.value;
       }
       // Caso "mais pao" (sem número explícito)
-      final incRegexNoNum = RegExp(r'^' +
-          incKeyword +
-          r'\s+(?:' +
-          escapedSingular +
-          r'|' +
-          escapedPlural +
-          r')\b');
+      final incRegexNoNum = RegExp(r'^' + incKeyword + r'\s+(?:' + escapedSingular + r'|' + escapedPlural + r')\b');
       if (incRegexNoNum.hasMatch(normalizedText)) return 1;
     }
 
-    // Lógica anterior para números antes/depois do item
-    final regexBefore = RegExp(
-        r'(\d+)\s+(?:' + escapedSingular + r'|' + escapedPlural + r')\b');
+    // Verifica padrão "quero 2 paes"
+    final regexBefore = RegExp(r'(\d+)\s+(?:' + escapedSingular + r'|' + escapedPlural + r')\b');
     var match = regexBefore.firstMatch(normalizedText);
     if (match != null) return int.tryParse(match.group(1) ?? '1') ?? 1;
 
+    // Verifica padrão "quero dois paes"
     for (var entry in _numberWords.entries) {
-      final regexWordBefore = RegExp(r'\b' +
-          entry.key +
-          r'\b\s+(?:' +
-          escapedSingular +
-          r'|' +
-          escapedPlural +
-          r')\b');
+      final regexWordBefore = RegExp(r'\b' + entry.key + r'\s+(?:' + escapedSingular + r'|' + escapedPlural + r')\b');
       if (regexWordBefore.hasMatch(normalizedText)) return entry.value;
     }
 
-    final regexAfter = RegExp(
-        r'\b(?:' + escapedSingular + r'|' + escapedPlural + r')\s+(\d+)\b');
+    final regexAfter = RegExp(r'\b(?:' + escapedSingular + r'|' + escapedPlural + r')\s+(\d+)\b');
     match = regexAfter.firstMatch(normalizedText);
     if (match != null) return int.tryParse(match.group(1) ?? '1') ?? 1;
 
     for (var entry in _numberWords.entries) {
-      final regexWordAfter = RegExp(r'\b(?:' +
-          escapedSingular +
-          r'|' +
-          escapedPlural +
-          r')\s+\b' +
-          entry.key +
-          r'\b');
+      final regexWordAfter = RegExp(r'\b(?:' + escapedSingular + r'|' + escapedPlural + r')\s+\b' + entry.key + r'\b');
       if (regexWordAfter.hasMatch(normalizedText)) return entry.value;
     }
 
     // Caso "pao" (sem número explícito e sem incremento)
-    if (RegExp('\b' + escapedSingular + '\b').hasMatch(normalizedText) ||
-        RegExp('\b' + escapedPlural + '\b').hasMatch(normalizedText)) {
+    if (RegExp('\\b' + escapedSingular + '\\b').hasMatch(normalizedText) ||
+        RegExp('\\b' + escapedPlural + '\\b').hasMatch(normalizedText)) {
       final hasLooseNumber = RegExp(r'\b\d+\b').hasMatch(normalizedText);
-      final hasLooseNumberWord = _numberWords.keys
-          .any((word) => RegExp('\b$word\b').hasMatch(normalizedText));
-      if (!hasLooseNumber &&
-          !hasLooseNumberWord &&
-          !_incrementKeywords.any((kw) => normalizedText.contains(kw)))
+      final hasLooseNumberWord = _numberWords.keys.any((word) => RegExp('\\b$word\\b').hasMatch(normalizedText));
+      if (!hasLooseNumber && !hasLooseNumberWord && !_incrementKeywords.any((kw) => normalizedText.contains(kw)))
         return 1;
     }
 
     // Caso "1 pao" (apenas número e item)
-    final numberItemRegex = RegExp(r'^(\d+|' +
-        _numberWords.keys.join('|') +
-        r')\s+(?:' +
-        escapedSingular +
-        r'|' +
-        escapedPlural +
-        r')$');
+    final numberItemRegex = RegExp(r'^(\d+|' + _numberWords.keys.join('|') + r')\s+(?:' + escapedSingular + r'|' + escapedPlural + r')$');
     match = numberItemRegex.firstMatch(normalizedText);
     if (match != null) {
       final numberPart = match.group(1)!;
@@ -568,17 +588,14 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
     for (var item in _menuItems) {
       final normalizedSingular = _normalizeText(item.name);
       final normalizedPlural = _getPluralForm(normalizedSingular);
-      if (RegExp('\b' + RegExp.escape(normalizedSingular) + '\b')
-              .hasMatch(normalizedText) ||
-          RegExp('\b' + RegExp.escape(normalizedPlural) + '\b')
-              .hasMatch(normalizedText)) {
+      if (RegExp('\\b' + RegExp.escape(normalizedSingular) + '\\b').hasMatch(normalizedText) ||
+          RegExp('\\b' + RegExp.escape(normalizedPlural) + '\\b').hasMatch(normalizedText)) {
         matchedItems.add(item);
       }
     }
 
     // Priorizar match mais longo (item composto)
-    matchedItems.sort((a, b) =>
-        _normalizeText(b.name).length.compareTo(_normalizeText(a.name).length));
+    matchedItems.sort((a, b) => _normalizeText(b.name).length.compareTo(_normalizeText(a.name).length));
 
     MenuItem? bestMatch;
     if (matchedItems.isNotEmpty) {
@@ -594,20 +611,14 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
     if (bestMatch != null) {
       // Remover o nome do item (e quantidade, se adjacente) para isolar a descrição
       remainingText = originalText
-          .replaceAll(
-              RegExp('\b' + RegExp.escape(bestMatch.name) + '\b',
-                  caseSensitive: false),
-              '')
+          .replaceAll(RegExp('\\b' + RegExp.escape(bestMatch.name) + '\\b', caseSensitive: false), '')
           .trim();
       String quantityStr = itemsFound[bestMatch.id]?.toString() ?? '';
       if (quantityStr.isNotEmpty) {
-        remainingText = remainingText
-            .replaceAll(RegExp('\b' + quantityStr + '\b'), '')
-            .trim();
+        remainingText = remainingText.replaceAll(RegExp('\\b' + quantityStr + '\\b'), '').trim();
       }
       for (var word in _numberWords.keys) {
-        remainingText =
-            remainingText.replaceAll(RegExp('\b' + word + '\b'), '').trim();
+        remainingText = remainingText.replaceAll(RegExp('\\b' + word + '\\b'), '').trim();
       }
       // Remover palavras de incremento do início
       for (var incKeyword in _incrementKeywords) {
@@ -643,34 +654,32 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
       _updateCartTotal();
       itemAdded = true;
 
-      String itemAddedMessage =
-          'Entendi "${bestMatch!.name}" (${itemsFound[bestMatch.id]}x). Adicionado ao pedido.';
+      String itemAddedMessage = 'Entendi "${bestMatch!.name}" (${itemsFound[bestMatch.id]}x). Adicionado ao pedido.';
       _addBotMessage(itemAddedMessage);
 
-      // Adicionar descrição SE ela foi encontrada E não existe ainda
+      // Adicionar/Substituir descrição SE ela foi encontrada
       if (descriptionKeywordFound && potentialDescription.isNotEmpty) {
-        String normalizedPotentialDesc = _normalizeText(potentialDescription);
-        if (!_orderDescriptions
-            .any((desc) => _normalizeText(desc) == normalizedPotentialDesc)) {
-          _orderDescriptions.add(potentialDescription);
-          _addBotMessage('Observação adicionada: "$potentialDescription".');
+        String oldDescription = _orderDescription;
+        _orderDescription = potentialDescription;
+        if (oldDescription.isEmpty) {
+           _addBotMessage('Observação adicionada: "$_orderDescription".');
+        } else {
+           _addBotMessage('Observação alterada de "$oldDescription" para "$_orderDescription".');
         }
       }
       _showOrderSummary();
     } else if (descriptionKeywordFound && _cartItems.isNotEmpty && !itemAdded) {
       // Se não encontrou item mas encontrou descrição e já há itens no carrinho
-      // (Tratar como adição de descrição avulsa)
+      // (Tratar como adição/substituição de descrição avulsa)
       String newDescription = originalText.trim();
-      String normalizedNewDesc = _normalizeText(newDescription);
-      if (!_orderDescriptions
-          .any((desc) => _normalizeText(desc) == normalizedNewDesc)) {
-        _orderDescriptions.add(newDescription);
-        _addBotMessage(
-            'Entendido. Adicionei "$newDescription" como observação ao seu pedido.');
+      String oldDescription = _orderDescription;
+      _orderDescription = newDescription;
+      if (oldDescription.isEmpty) {
+        _addBotMessage('Entendido. Adicionei "$_orderDescription" como observação ao seu pedido.');
       } else {
-        _addBotMessage('Essa observação já existe.');
+        _addBotMessage('Entendido. Alterei a observação de "$oldDescription" para "$_orderDescription".');
       }
-      _showOrderSummary(showButtons: false);
+      _showOrderSummary(); // Mostrar resumo com botões após alterar descrição
     } else {
       // Se não encontrou item nem descrição clara, tentar similaridade
       _trySimilarityMatch(originalText);
@@ -694,15 +703,13 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
 
       final simSingularFull = normalizedText.similarityTo(normalizedSingular);
       final simPluralFull = normalizedText.similarityTo(normalizedPlural);
-      currentHighestSim =
-          simSingularFull > simPluralFull ? simSingularFull : simPluralFull;
+      currentHighestSim = simSingularFull > simPluralFull ? simSingularFull : simPluralFull;
 
       for (String word in normalizedText.split(' ')) {
         if (word.length < 3) continue;
         final simSingularWord = word.similarityTo(normalizedSingular);
         final simPluralWord = word.similarityTo(normalizedPlural);
-        final simWord =
-            simSingularWord > simPluralWord ? simSingularWord : simPluralWord;
+        final simWord = simSingularWord > simPluralWord ? simSingularWord : simPluralWord;
         if (simWord > currentHighestSim) {
           currentHighestSim = simWord;
         }
@@ -722,8 +729,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
 
       _cartItems[matchedItem.id] = (_cartItems[matchedItem.id] ?? 0) + quantity;
       _updateCartTotal();
-      _addBotMessage(
-          'Entendi "${matchedItem.name}" (por similaridade). Adicionado ao pedido.');
+      _addBotMessage('Entendi "${matchedItem.name}" (por similaridade). Adicionado ao pedido.');
       _showOrderSummary();
     } else {
       _handleUnclearMessage();
@@ -734,8 +740,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
     _cartTotal = 0.0;
     _cartItems.forEach((itemId, quantity) {
       final item = _menuItems.firstWhere((i) => i.id == itemId,
-          orElse: () => MenuItem(
-              id: '', name: 'Desconhecido', description: '', price: 0));
+          orElse: () => MenuItem(id: '', name: 'Desconhecido', description: '', price: 0));
       _cartTotal += item.price * quantity;
     });
   }
@@ -749,61 +754,68 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
     String summary = 'Resumo atual:\n\n';
     _cartItems.forEach((itemId, quantity) {
       final item = _menuItems.firstWhere((i) => i.id == itemId,
-          orElse: () => MenuItem(
-              id: '', name: 'Desconhecido', description: '', price: 0));
-      summary +=
-          '- ${quantity}x ${item.name}: R\$ ${(item.price * quantity).toStringAsFixed(2)}\n';
+          orElse: () => MenuItem(id: '', name: 'Desconhecido', description: '', price: 0));
+      summary += '- ${quantity}x ${item.name}: R\$ ${(item.price * quantity).toStringAsFixed(2)}\n';
     });
     summary += '\nTotal: R\$ ${_cartTotal.toStringAsFixed(2)}\n';
 
-    // Exibir lista numerada de descrições
-    if (_orderDescriptions.isNotEmpty) {
-      summary += '\nObservações:\n';
-      for (int i = 0; i < _orderDescriptions.length; i++) {
-        summary += '${i + 1}. ${_orderDescriptions[i]}\n';
-      }
+    // Exibir descrição única
+    if (_orderDescription.isNotEmpty) {
+      summary += '\nObservação: ${_orderDescription}\n';
     }
 
-    summary +=
-        '\nVocê pode adicionar mais itens, adicionar/mudar descrições ou confirmar o pedido.';
+    summary += '\nVocê pode adicionar mais itens, adicionar/mudar/remover a observação ou confirmar o pedido.';
     _addBotMessage(summary);
 
     if (showButtons) {
       Future.delayed(const Duration(milliseconds: 500), () {
         setState(() {
-          _messages.add(ChatMessage(
-            text: 'Adicionar Descrição',
-            isUser: false,
-            timestamp: DateTime.now(),
-            isButton: true,
-            onButtonPressed: () {
-              _addBotMessage(
-                  'Qual descrição/observação você gostaria de adicionar ao pedido?');
+          List<ChatAction> actionButtons = [];
+
+          // Botão Adicionar Outro Item (SEMPRE)
+          actionButtons.add(ChatAction(
+            label: 'Adicionar Outro Item',
+            action: () {
+              _addBotMessage('O que mais você gostaria de pedir?');
+            },
+          ));
+
+          // Botão Adicionar/Editar Descrição
+          actionButtons.add(ChatAction(
+            label: _orderDescription.isEmpty ? 'Adicionar Observação' : 'Editar Observação',
+            action: () {
+              _addBotMessage(_orderDescription.isEmpty
+                  ? 'Qual observação você gostaria de adicionar ao pedido?'
+                  : 'Qual a nova observação para substituir "$_orderDescription"?');
               _waitingForDescription = true;
             },
           ));
-          // NOVO: Botão para Mudar Descrição (se houver descrições)
-          if (_orderDescriptions.isNotEmpty) {
-            _messages.add(ChatMessage(
-              text: 'Mudar Descrição',
-              isUser: false,
-              timestamp: DateTime.now(),
-              isButton: true,
-              onButtonPressed: () {
-                _addBotMessage(
-                    'Qual número de descrição você quer mudar e qual o novo texto? (Ex: "mudar descrição 1 para sem queijo")');
-                // Não definimos _waitingForDescription aqui, pois o comando é direto
+
+          // Botão Remover Descrição (se houver)
+          if (_orderDescription.isNotEmpty) {
+            actionButtons.add(ChatAction(
+              label: 'Remover Observação',
+              action: () {
+                _processRemoveDescriptionCommand(); // Chama a função diretamente
               },
             ));
           }
-          _messages.add(ChatMessage(
-            text: 'Confirmar Pedido',
-            isUser: false,
-            timestamp: DateTime.now(),
-            isButton: true,
-            onButtonPressed: () {
+
+          // Botão Confirmar Pedido (SEMPRE)
+          actionButtons.add(ChatAction(
+            label: 'Confirmar Pedido',
+            action: () {
               _confirmOrder();
             },
+          ));
+
+          // Adiciona a mensagem com os botões
+          _messages.add(ChatMessage(
+            text: '', // Texto não é usado quando isActionButtons é true
+            isUser: false,
+            timestamp: DateTime.now(),
+            isActionButtons: true,
+            actions: actionButtons,
           ));
         });
         _scrollToBottom();
@@ -812,38 +824,67 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
   }
 
   void _handleUnclearMessage() {
-    _addBotMessage(
-        'Desculpe, não entendi. Você gostaria de ver o cardápio ou fazer um pedido?');
+    _addBotMessage('Desculpe, não entendi. Você gostaria de ver o cardápio ou fazer um pedido?');
     Future.delayed(const Duration(milliseconds: 500), () {
       setState(() {
         _messages.add(ChatMessage(
-          text: 'Cardápio',
+          text: '',
           isUser: false,
           timestamp: DateTime.now(),
-          isButton: true,
-          onButtonPressed: () {
-            _showMenuItems();
-          },
+          isActionButtons: true,
+          actions: [
+            ChatAction(
+              label: 'Cardápio',
+              action: () {
+                _showMenuItems();
+              },
+            ),
+          ],
         ));
         _messages.add(ChatMessage(
-          text: 'Fazer Pedido',
+          text: '',
           isUser: false,
           timestamp: DateTime.now(),
-          isButton: true,
-          onButtonPressed: () {
-            _addBotMessage('O que você gostaria de pedir hoje?');
-          },
+          isActionButtons: true,
+          actions: [
+            ChatAction(
+              label: 'Fazer Pedido',
+              action: () {
+                _addBotMessage('O que você gostaria de pedir hoje?');
+              },
+            ),
+          ],
         ));
       });
       _scrollToBottom();
     });
   }
 
-  // --- MÉTODO _confirmOrder --- (ESSENCIAL)
+  // Função para obter e incrementar o número do pedido sequencial
+  Future<int> _getNextOrderNumber() async {
+    final counterRef = _firestore.collection('counters').doc('order_number');
+
+    // Executa uma transação para garantir atomicidade
+    return _firestore.runTransaction<int>((transaction) async {
+      final snapshot = await transaction.get(counterRef);
+
+      if (!snapshot.exists) {
+        // Se o contador não existe, cria com valor 1
+        transaction.set(counterRef, {'value': 1});
+        return 1;
+      } else {
+        // Se existe, incrementa o valor
+        final currentNumber = (snapshot.data()?['value'] as int?) ?? 0;
+        final nextNumber = currentNumber + 1;
+        transaction.update(counterRef, {'value': nextNumber});
+        return nextNumber;
+      }
+    });
+  }
+
   Future<void> _confirmOrder() async {
     if (_cartItems.isEmpty) {
-      _addBotMessage(
-          'Seu carrinho está vazio. Adicione itens antes de confirmar.');
+      _addBotMessage('Seu carrinho está vazio. Adicione itens antes de confirmar.');
       return;
     }
 
@@ -853,26 +894,29 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
     _addBotMessage('Confirmando seu pedido...');
 
     try {
-      final authProvider =
-          Provider.of<ChatbotAuthProvider>(context, listen: false);
+      final authProvider = Provider.of<ChatbotAuthProvider>(context, listen: false);
       final user = authProvider.currentUser;
       if (user == null) {
         throw Exception('Usuário não autenticado.');
       }
 
-      // Obter o UID do usuário logado através da instância _auth
+      // Obter o UID e Email do usuário logado através da instância _auth
       final firebaseUser = _auth.currentUser;
       if (firebaseUser == null) {
         throw Exception('Usuário Firebase não encontrado.');
       }
       final userId = firebaseUser.uid;
+      final userEmail = firebaseUser.email ?? ''; // Usar email para extrair RA
+
+      // Obter o próximo número de pedido sequencial
+      final nextOrderNumber = await _getNextOrderNumber();
+      final orderNumberString = nextOrderNumber.toString().padLeft(3, '0'); // Formata como 001, 002...
 
       // Criar lista de itens formatada para o Firestore
       List<Map<String, dynamic>> itemsList = [];
       _cartItems.forEach((itemId, quantity) {
         final item = _menuItems.firstWhere((i) => i.id == itemId,
-            orElse: () => MenuItem(
-                id: '', name: 'Desconhecido', description: '', price: 0));
+            orElse: () => MenuItem(id: '', name: 'Desconhecido', description: '', price: 0));
         itemsList.add({
           'itemId': itemId,
           'name': item.name,
@@ -883,25 +927,26 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
 
       // Salvar pedido no Firestore
       final orderRef = await _firestore.collection('orders').add({
-        'userId': userId, // Usar UID obtido da instância _auth
-        'userRa': user.ra.split('@').first, // Salvar apenas o RA
-        'userPhone': user.phone,
+        'userId': userId,
+        'userEmail': userEmail, // Salvar email
+        'userPhone': user.phone, // Manter telefone se existir
         'items': itemsList,
         'total': _cartTotal,
-        // Salvar lista de descrições
-        'descriptions': _orderDescriptions,
+        'description': _orderDescription, // Salvar descrição única
         'status': 'pending', // Status inicial
         'timestamp': FieldValue.serverTimestamp(),
+        'orderNumber': nextOrderNumber, // Salvar o número sequencial (int)
       });
 
-      // Guardar o total antes de limpar
+      // Guardar o total e número antes de limpar
       final confirmedTotal = _cartTotal;
+      final confirmedOrderNumber = orderNumberString; // Usar o número formatado
 
       // Limpar carrinho e estado local
       setState(() {
         _cartItems = {};
         _cartTotal = 0.0;
-        _orderDescriptions = [];
+        _orderDescription = ''; // Limpar descrição
         _isLoading = false;
       });
 
@@ -910,23 +955,25 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
         context,
         MaterialPageRoute(
           builder: (context) => ConfirmationScreen(
-              orderId: orderRef.id, totalValue: confirmedTotal),
+            orderId: orderRef.id,
+            totalValue: confirmedTotal,
+            orderNumber: confirmedOrderNumber, // Passar número do pedido formatado
+          ),
         ),
       );
+
       // Adicionar mensagem de sucesso após a navegação
-      _addBotMessage(
-          'Pedido #${orderRef.id.substring(0, 6)} confirmado com sucesso! Obrigado!');
+      _addBotMessage('Pedido #$confirmedOrderNumber confirmado com sucesso! Obrigado!');
+
     } catch (e) {
       print('Erro ao confirmar pedido: $e');
       setState(() {
         _isLoading = false;
       });
-      _addBotMessage(
-          'Desculpe, houve um erro ao confirmar seu pedido. Por favor, tente novamente.');
+      _addBotMessage('Desculpe, houve um erro ao confirmar seu pedido. Detalhes: $e');
     }
   }
 
-  // --- MÉTODO build --- (ESSENCIAL)
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -936,8 +983,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () async {
-              await Provider.of<ChatbotAuthProvider>(context, listen: false)
-                  .logout();
+              await Provider.of<ChatbotAuthProvider>(context, listen: false).logout();
               Navigator.pushReplacementNamed(context, '/login');
             },
           ),
@@ -952,46 +998,57 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
               itemCount: _messages.length,
               itemBuilder: (context, index) {
                 final message = _messages[index];
-                if (message.isButton) {
-                  return Container(
-                    margin: const EdgeInsets.symmetric(
-                        vertical: 4.0, horizontal: 40.0),
-                    child: ElevatedButton(
-                      onPressed: message.onButtonPressed,
-                      child: Text(message.text),
-                      style: ElevatedButton.styleFrom(
-                        foregroundColor: Colors.white,
-                        backgroundColor: Theme.of(context)
-                            .colorScheme
-                            .secondary, // Cor do botão
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(20.0),
-                        ),
-                      ),
+
+                // Mensagem com botões de ação
+                if (message.isActionButtons && message.actions.isNotEmpty) {
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 16.0),
+                    child: Wrap(
+                      spacing: 8.0, // Espaço horizontal entre botões
+                      runSpacing: 8.0, // Espaço vertical entre linhas de botões
+                      alignment: WrapAlignment.center,
+                      children: message.actions.map((action) {
+                        return ElevatedButton(
+                          onPressed: action.action,
+                          child: Text(action.label),
+                          style: ElevatedButton.styleFrom(
+                             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          )
+                        );
+                      }).toList(),
                     ),
                   );
                 }
-                return Align(
-                  alignment: message.isUser
-                      ? Alignment.centerRight
-                      : Alignment.centerLeft,
-                  child: Container(
-                    margin: const EdgeInsets.symmetric(
-                        vertical: 4.0, horizontal: 8.0),
-                    padding: const EdgeInsets.symmetric(
-                        vertical: 10.0, horizontal: 14.0),
-                    decoration: BoxDecoration(
-                      color: message.isUser
-                          ? Theme.of(context).colorScheme.primary
-                          : Colors.grey[300],
-                      borderRadius: BorderRadius.circular(20.0),
-                    ),
-                    child: Text(
-                      message.text,
-                      style: TextStyle(
-                        color: message.isUser ? Colors.white : Colors.black87,
+
+                // Mensagem normal de texto
+                return Container(
+                  margin: EdgeInsets.only(
+                    top: 8.0,
+                    bottom: 8.0,
+                    left: message.isUser ? 64.0 : 8.0,
+                    right: message.isUser ? 8.0 : 64.0,
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
+                  decoration: BoxDecoration(
+                    color: message.isUser ? Colors.blue[100] : Colors.grey[200],
+                    borderRadius: BorderRadius.circular(12.0),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        message.text,
+                        style: const TextStyle(fontSize: 16.0),
                       ),
-                    ),
+                      const SizedBox(height: 4.0),
+                      Text(
+                        DateFormat('HH:mm').format(message.timestamp),
+                        style: TextStyle(
+                          fontSize: 12.0,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ],
                   ),
                 );
               },
@@ -1002,26 +1059,38 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
               padding: EdgeInsets.all(8.0),
               child: CircularProgressIndicator(),
             ),
-          const Divider(height: 1.0),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8.0),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.grey.withOpacity(0.3),
+                  spreadRadius: 1,
+                  blurRadius: 3,
+                  offset: const Offset(0, -1),
+                ),
+              ],
+            ),
             child: Row(
               children: [
                 Expanded(
                   child: TextField(
                     controller: _textController,
-                    decoration: const InputDecoration.collapsed(
-                      hintText: 'Digite sua mensagem ou pedido...',
+                    decoration: const InputDecoration(
+                      hintText: 'Digite sua mensagem...',
+                      border: InputBorder.none,
                     ),
-                    textCapitalization: TextCapitalization.sentences,
-                    onSubmitted: _isLoading ? null : _addUserMessage,
+                    onSubmitted: (text) {
+                      _addUserMessage(text);
+                    },
                   ),
                 ),
                 IconButton(
                   icon: const Icon(Icons.send),
-                  onPressed: _isLoading
-                      ? null
-                      : () => _addUserMessage(_textController.text),
+                  onPressed: () {
+                    _addUserMessage(_textController.text);
+                  },
                 ),
               ],
             ),
@@ -1029,160 +1098,6 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
         ],
       ),
     );
-
-
-  // NOVO: Função para verificar se é comando de edição
-  bool _isEditDescriptionCommand(String normalizedText) {
-    final editKeywords = ['mudar', 'alterar', 'trocar', 'editar'];
-    final descriptionKeywords = [
-      'descrição',
-      'descricao',
-      'observação',
-      'observacao'
-    ];
-    final paraKeywords = ['para', 'por'];
-
-    // Padrão: (mudar|alterar|...) (descrição|observação|...) [número] (para|por) [novo texto]
-    final regex = RegExp(r'^(' +
-        editKeywords.join('|') +
-        r')\s+(' +
-        descriptionKeywords.join('|') +
-        r')\s+(\d+)\s+(' +
-        paraKeywords.join('|') +
-        r')\s+(.+)$');
-    return regex.hasMatch(normalizedText);
-  }
-
-  // NOVO: Função para processar comando de edição
-  void _processEditDescriptionCommand(String originalText) {
-    final normalizedText = _normalizeText(originalText);
-    final editKeywords = ['mudar', 'alterar', 'trocar', 'editar'];
-    final descriptionKeywords = [
-      'descrição',
-      'descricao',
-      'observação',
-      'observacao'
-    ];
-    final paraKeywords = ['para', 'por'];
-
-    final regex = RegExp(r'^(' +
-        editKeywords.join('|') +
-        r')\s+(' +
-        descriptionKeywords.join('|') +
-        r')\s+(\d+)\s+(' +
-        paraKeywords.join('|') +
-        r')\s+(.+)$');
-
-    final match = regex.firstMatch(normalizedText);
-    if (match != null && match.groupCount >= 5) {
-      final indexStr = match.group(3);
-      final newDescriptionPart = match.group(5);
-
-      if (indexStr != null && newDescriptionPart != null) {
-        final index = int.tryParse(indexStr);
-        // Extrair a nova descrição do texto original para manter a capitalização
-        final originalMatch = RegExp(
-                r'^(?:' +
-                    editKeywords.join('|') +
-                    r')\s+(?:' +
-                    descriptionKeywords.join('|') +
-                    r')\s+' +
-                    indexStr +
-                    r'\s+(?:' +
-                    paraKeywords.join('|') +
-                    r')\s+(.+)$',
-                caseSensitive: false)
-            .firstMatch(originalText);
-
-        final newDescription =
-            originalMatch?.group(1)?.trim() ?? newDescriptionPart.trim();
-
-        if (index != null && index > 0 && index <= _orderDescriptions.length) {
-          final oldDescription = _orderDescriptions[index - 1];
-          _orderDescriptions[index - 1] = newDescription;
-          _addBotMessage(
-              'Descrição ${index} alterada de "$oldDescription" para "$newDescription".');
-          _showOrderSummary();
-        } else {
-          _addBotMessage(
-              'Número de descrição inválido. Por favor, informe um número entre 1 e ${_orderDescriptions.length}.');
-           _showOrderSummary(showButtons: false); // Evitar loop
-        }
-      } else {
-        _addBotMessage(
-            'Não consegui entender qual descrição mudar ou qual o novo texto. Use o formato: "mudar descrição [número] para [novo texto]".');
-         _showOrderSummary(showButtons: false); // Evitar loop
-      }
-    } else {
-      _addBotMessage(
-          'Não consegui entender o comando de mudança de descrição. Use o formato: "mudar descrição [número] para [novo texto]".');
-       _showOrderSummary(showButtons: false); // Evitar loop
-    }
-  }
-
-  // NOVO: Função para verificar se é comando de exclusão
-  bool _isDeleteDescriptionCommand(String normalizedText) {
-    final deleteKeywords = ['excluir', 'remover', 'tirar', 'apagar'];
-    final descriptionKeywords = [
-      'descrição',
-      'descricao',
-      'observação',
-      'observacao',
-      'item'
-    ]; // Inclui 'item' para "excluir item 1" da descrição
-
-    // Padrão: (excluir|remover|...) (descrição|observação|...) [número]
-    final regex = RegExp(r'^(' +
-        deleteKeywords.join('|') +
-        r')\s+(?:' + // Grupo opcional para palavra chave da descrição
-        descriptionKeywords.join('|') +
-        r'\s+)?(\d+)$'); // Torna a palavra "descrição" opcional
-    return regex.hasMatch(normalizedText);
-  }
-
-  // NOVO: Função para processar comando de exclusão
-  void _processDeleteDescriptionCommand(String originalText) {
-    final normalizedText = _normalizeText(originalText);
-    final deleteKeywords = ['excluir', 'remover', 'tirar', 'apagar'];
-    final descriptionKeywords = [
-      'descrição',
-      'descricao',
-      'observação',
-      'observacao',
-      'item'
-    ];
-
-    final regex = RegExp(r'^(' +
-        deleteKeywords.join('|') +
-        r')\s+(?:' +
-        descriptionKeywords.join('|') +
-        r'\s+)?(\d+)$');
-
-    final match = regex.firstMatch(normalizedText);
-    if (match != null && match.groupCount >= 2) { // Precisa capturar o número
-      final indexStr = match.group(2); // O número é o segundo grupo capturado
-      if (indexStr != null) {
-        final index = int.tryParse(indexStr);
-        if (index != null && index > 0 && index <= _orderDescriptions.length) {
-          final removedDescription = _orderDescriptions.removeAt(index - 1);
-          _addBotMessage('Descrição ${index} ("$removedDescription") removida.');
-          _showOrderSummary();
-        } else {
-          _addBotMessage(
-              'Número de descrição inválido. Por favor, informe um número entre 1 e ${_orderDescriptions.length}.');
-          _showOrderSummary(showButtons: false); // Mostra resumo sem botões para evitar loop
-        }
-      } else {
-         // Este caso não deveria ocorrer com a regex atual se houver match
-        _addBotMessage(
-            'Não consegui identificar o número da descrição para excluir. Use o formato: "excluir [número]".');
-         _showOrderSummary(showButtons: false);
-      }
-    } else {
-      // Mensagem de erro genérica se o comando não corresponder exatamente
-       _addBotMessage(
-           'Não consegui entender o comando de exclusão. Use o formato: "excluir [número]" ou "excluir descrição [número]".');
-       _showOrderSummary(showButtons: false);
-    }
   }
 }
+

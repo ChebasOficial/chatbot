@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 
 class ConfirmationScreen extends StatelessWidget {
-  final String orderId;
+  final String orderId; // Mantém o ID do Firebase, pode ser útil para consultas futuras
   final double totalValue;
+  final String orderNumber; // NOVO: Número do pedido (000-999)
 
   const ConfirmationScreen({
     Key? key,
     required this.orderId,
     required this.totalValue,
+    required this.orderNumber, // Adiciona o parâmetro obrigatório
   }) : super(key: key);
 
   @override
@@ -15,7 +17,7 @@ class ConfirmationScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Pedido Confirmado'),
-        automaticallyImplyLeading: false,
+        automaticallyImplyLeading: false, // Impede o botão de voltar automático
       ),
       body: Center(
         child: Padding(
@@ -47,9 +49,9 @@ class ConfirmationScreen extends StatelessWidget {
               ),
               const SizedBox(height: 8.0),
               Text(
-                orderId,
+                '#$orderNumber', // Exibe o número do pedido formatado
                 style: const TextStyle(
-                  fontSize: 20.0,
+                  fontSize: 28.0, // Aumenta o tamanho para destaque
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -73,9 +75,11 @@ class ConfirmationScreen extends StatelessWidget {
               const SizedBox(height: 48.0),
               ElevatedButton(
                 onPressed: () {
+                  // Volta para a tela inicial (ou a tela desejada após confirmação)
+                  // Removendo todas as rotas anteriores para evitar voltar ao chat
                   Navigator.pushNamedAndRemoveUntil(
                     context,
-                    '/inicio',
+                    '/inicio', // Certifique-se que '/inicio' é a rota correta
                     (route) => false,
                   );
                 },
@@ -97,3 +101,4 @@ class ConfirmationScreen extends StatelessWidget {
     );
   }
 }
+

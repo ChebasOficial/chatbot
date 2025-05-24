@@ -13,10 +13,8 @@ class _OrderHistoryTabState extends State<OrderHistoryTab> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final TextEditingController _filterController = TextEditingController();
   bool _isLoading = false;
-  List<Map<String, dynamic>> _allOrders =
-      []; // Lista com todos os pedidos carregados
-  List<Map<String, dynamic>> _filteredOrders =
-      []; // Lista filtrada para exibição
+  List<Map<String, dynamic>> _allOrders = []; // Lista com todos os pedidos carregados
+  List<Map<String, dynamic>> _filteredOrders = []; // Lista filtrada para exibição
   String _filterText = "";
 
   @override
@@ -40,6 +38,20 @@ class _OrderHistoryTabState extends State<OrderHistoryTab> {
     });
   }
 
+  // Função segura para ler orderNumber (aceita int ou String)
+  int _parseOrderNumber(dynamic value) {
+    if (value == null) {
+      return 0;
+    }
+    if (value is int) {
+      return value;
+    }
+    if (value is String) {
+      return int.tryParse(value) ?? 0;
+    }
+    return 0;
+  }
+
   Future<void> _loadOrders() async {
     setState(() {
       _isLoading = true;
@@ -53,14 +65,32 @@ class _OrderHistoryTabState extends State<OrderHistoryTab> {
 
       final orders = snapshot.docs.map((doc) {
         final data = doc.data();
+        // Tratamento de nulos e tipos para todos os campos relevantes
+        final orderNumber = _parseOrderNumber(data['orderNumber']); // Usar função segura
+        final userEmail = (data['userEmail'] as String?) ?? ''; // Usar email
+        final timestamp = data['timestamp'] as Timestamp?;
+        final itemsData = (data['items'] as List<dynamic>?) ?? [];
+        final total = (data['total'] as num?)?.toDouble() ?? 0.0;
+        final description = (data['description'] as String?) ?? ''; // Ler descrição
+
+        // Mapear itens com tratamento de nulos interno
+        final items = itemsData.map((itemData) {
+          final itemMap = itemData as Map<String, dynamic>? ?? {};
+          return {
+            'name': (itemMap['name'] as String?) ?? 'Item desconhecido',
+            'quantity': (itemMap['quantity'] as int?) ?? 0,
+            'price': (itemMap['price'] as num?)?.toDouble() ?? 0.0,
+          };
+        }).toList();
+
         return {
           'id': doc.id,
-          'orderNumber': data['orderNumber'] ?? 0,
-          'userRa':
-              data['userRa'] ?? 'RA desconhecido', // CORRIGIDO: Ler userRa
-          'timestamp': data['timestamp'] as Timestamp?,
-          'items': data['items'] as List<dynamic>? ?? [],
-          'total': (data['total'] ?? 0).toDouble(),
+          'orderNumber': orderNumber,
+          'userEmail': userEmail, // Salvar email
+          'timestamp': timestamp,
+          'items': items,
+          'total': total,
+          'description': description, // Salvar descrição
         };
       }).toList();
 
@@ -91,18 +121,20 @@ class _OrderHistoryTabState extends State<OrderHistoryTab> {
       _filteredOrders = List.from(_allOrders);
     } else {
       _filteredOrders = _allOrders.where((order) {
-        final ra = _extractRA(order['userEmail'] as String);
+        // Acessar userEmail com segurança
+        final email = order['userEmail'] as String? ?? '';
+        final ra = _extractRA(email);
         return ra.toLowerCase().contains(_filterText.toLowerCase());
       }).toList();
     }
   }
 
-  String _extractRA(String email) {
-    final parts = email.split('@');
-    if (parts.isNotEmpty) {
-      return parts[0];
+  // Função segura para extrair RA do email
+  String _extractRA(String? email) {
+    if (email == null || email.isEmpty || !email.contains('@')) {
+      return 'RA N/A'; // Retornar valor padrão se email for inválido
     }
-    return 'RA desconhecido';
+    return email.split('@')[0];
   }
 
   @override
@@ -147,19 +179,21 @@ class _OrderHistoryTabState extends State<OrderHistoryTab> {
                           ),
                         )
                       : ListView.builder(
-                          padding: const EdgeInsets.only(
-                              left: 16.0, right: 16.0, bottom: 16.0),
+                          padding: const EdgeInsets.only(left: 16.0, right: 16.0, bottom: 16.0),
                           itemCount: _filteredOrders.length,
                           itemBuilder: (context, index) {
                             final order = _filteredOrders[index];
+
+                            // Acessar dados com segurança usando valores padrão definidos no _loadOrders
+                            final orderNumber = order['orderNumber'] as int; // Já tratado
                             final timestamp = order['timestamp'] as Timestamp?;
-                            final dateTime =
-                                timestamp?.toDate() ?? DateTime.now();
-                            final formattedDate =
-                                DateFormat('dd/MM/yyyy HH:mm').format(dateTime);
-                            final ra = _extractRA(order['userEmail'] as String);
-                            final items = order['items'] as List<dynamic>;
-                            final total = order['total'] as double;
+                            final dateTime = timestamp?.toDate() ?? DateTime.now();
+                            final formattedDate = DateFormat('dd/MM/yyyy HH:mm').format(dateTime);
+                            final email = order['userEmail'] as String; // Já tratado
+                            final ra = _extractRA(email);
+                            final items = order['items'] as List<Map<String, dynamic>>; // Já tratado
+                            final total = order['total'] as double; // Já tratado
+                            final description = order['description'] as String; // Já tratado
 
                             return Card(
                               margin: const EdgeInsets.only(bottom: 16.0),
@@ -169,11 +203,11 @@ class _OrderHistoryTabState extends State<OrderHistoryTab> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceBetween,
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                       children: [
                                         Text(
-                                          'Pedido #${(order['orderNumber'] as int).toString().padLeft(3, '0')}',
+                                          // Formatar número do pedido
+                                          'Pedido #${orderNumber.toString().padLeft(3, '0')}',
                                           style: const TextStyle(
                                             fontSize: 16.0,
                                             fontWeight: FontWeight.bold,
@@ -203,30 +237,33 @@ class _OrderHistoryTabState extends State<OrderHistoryTab> {
                                     ),
                                     const SizedBox(height: 8.0),
                                     ...items.map((item) {
-                                      final name = item['name'] as String;
-                                      final quantity = item['quantity'] as int;
-                                      final price =
-                                          (item['price'] as num).toDouble();
+                                      // Acessar dados do item com segurança
+                                      final name = item['name'] as String; // Já tratado
+                                      final quantity = item['quantity'] as int; // Já tratado
+                                      final price = item['price'] as double; // Já tratado
                                       final itemTotal = price * quantity;
 
                                       return Padding(
-                                        padding:
-                                            const EdgeInsets.only(bottom: 4.0),
+                                        padding: const EdgeInsets.only(bottom: 4.0),
                                         child: Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.spaceBetween,
+                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                           children: [
-                                            Text('$quantity x $name'),
-                                            Text(
-                                                'R\$ ${itemTotal.toStringAsFixed(2)}'),
+                                            Expanded(child: Text('$quantity x $name')),
+                                            const SizedBox(width: 8),
+                                            Text('R\$ ${itemTotal.toStringAsFixed(2)}'),
                                           ],
                                         ),
                                       );
                                     }).toList(),
+                                    // Exibir descrição se houver
+                                    if (description.isNotEmpty)
+                                      Padding(
+                                        padding: const EdgeInsets.only(top: 8.0),
+                                        child: Text('Observação: $description'),
+                                      ),
                                     const Divider(),
                                     Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceBetween,
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                       children: [
                                         const Text(
                                           'Total:',
@@ -255,3 +292,4 @@ class _OrderHistoryTabState extends State<OrderHistoryTab> {
     );
   }
 }
+

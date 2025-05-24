@@ -23,28 +23,61 @@ class _KitchenScreenState extends State<KitchenScreen> {
     _loadPendingOrders();
   }
 
+  // Função segura para ler orderNumber (aceita int ou String)
+  int _parseOrderNumber(dynamic value) {
+    if (value == null) {
+      return 0;
+    }
+    if (value is int) {
+      return value;
+    }
+    if (value is String) {
+      return int.tryParse(value) ?? 0;
+    }
+    return 0;
+  }
+
   Future<void> _loadPendingOrders() async {
     setState(() {
       _isLoading = true;
     });
 
     try {
+      // Consulta que pode exigir índice composto (status + timestamp)
       final snapshot = await _firestore
           .collection("orders")
-          .where("status", isEqualTo: "pending") // CORRIGIDO: status correto
-          .orderBy("timestamp", descending: true)
+          .where("status", isEqualTo: "pending") // Buscar pedidos pendentes
+          .orderBy("timestamp", descending: false) // Ordenar pelo mais antigo primeiro
           .get();
+
       final orders = snapshot.docs.map((doc) {
         final data = doc.data();
+        // Tratamento de nulos e tipos para todos os campos relevantes
+        final orderNumber = _parseOrderNumber(data['orderNumber']); // Usar função segura
+        final userEmail = (data['userEmail'] as String?) ?? ''; // Usar email
+        final timestamp = data['timestamp'] as Timestamp?;
+        final itemsData = (data['items'] as List<dynamic>?) ?? [];
+        final total = (data['total'] as num?)?.toDouble() ?? 0.0;
+        final description = (data['description'] as String?) ?? ''; // Ler descrição
+
+        // Mapear itens com tratamento de nulos interno
+        final items = itemsData.map((itemData) {
+          final itemMap = itemData as Map<String, dynamic>? ?? {};
+          return {
+            'name': (itemMap['name'] as String?) ?? 'Item desconhecido',
+            'quantity': (itemMap['quantity'] as int?) ?? 0,
+            'price': (itemMap['price'] as num?)?.toDouble() ?? 0.0,
+          };
+        }).toList();
+
         return {
           'id': doc.id,
-          'orderNumber': data['orderNumber'] ?? 0,
-          'userRa':
-              data['userRa'] ?? 'RA desconhecido', // CORRIGIDO: Ler userRa
-          'timestamp': data['timestamp'] as Timestamp?,
-          'items': data['items'] as List<dynamic>? ?? [],
-          'total': (data['total'] ?? 0).toDouble(),
-          'description': data['description'] ?? '',
+          'orderNumber': orderNumber,
+          'userEmail': userEmail, // Salvar email
+          'timestamp': timestamp,
+          'items': items,
+          'total': total,
+          'description': description, // Salvar descrição
         };
       }).toList();
 
@@ -59,22 +92,31 @@ class _KitchenScreenState extends State<KitchenScreen> {
         _isLoading = false;
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Erro ao carregar pedidos: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (mounted) {
+         ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            // Mostrar mensagem de erro completa, incluindo link do índice se houver
+            content: Text('Erro ao carregar pedidos: ${e.toString()}'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 10), // Aumentar duração para ler o link
+            action: SnackBarAction(
+              label: 'FECHAR',
+              onPressed: () {
+                ScaffoldMessenger.of(context).hideCurrentSnackBar();
+              },
+            ),
+          ),
+        );
+      }
     }
   }
 
-  String _extractRA(String email) {
-    // Extrai o RA do email (assumindo que o email é no formato RA@dominio.com)
-    final parts = email.split('@');
-    if (parts.isNotEmpty) {
-      return parts[0];
+  // Função segura para extrair RA do email
+  String _extractRA(String? email) {
+    if (email == null || email.isEmpty || !email.contains('@')) {
+      return 'RA N/A'; // Retornar valor padrão se email for inválido
     }
-    return 'RA desconhecido';
+    return email.split('@')[0];
   }
 
   Future<void> _confirmOrder(int index) async {
@@ -88,7 +130,7 @@ class _KitchenScreenState extends State<KitchenScreen> {
     });
 
     try {
-      // Atualizar o status do pedido para 'concluído'
+      // Atualizar o status do pedido para 'concluido'
       await _firestore.collection('orders').doc(orderId).update({
         'status': 'concluido',
         'completedAt': FieldValue.serverTimestamp(),
@@ -97,37 +139,45 @@ class _KitchenScreenState extends State<KitchenScreen> {
       // Remover o pedido da lista local
       setState(() {
         _pendingOrders.removeAt(index);
-        _selectedOrderIndex = _pendingOrders.isNotEmpty ? 0 : -1;
+        // Ajustar índice selecionado após remover
+        if (_pendingOrders.isEmpty) {
+          _selectedOrderIndex = -1;
+        } else if (_selectedOrderIndex >= _pendingOrders.length) {
+          _selectedOrderIndex = _pendingOrders.length - 1;
+        }
         _isLoading = false;
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Pedido confirmado com sucesso!'),
-          backgroundColor: Colors.green,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Pedido confirmado com sucesso!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
     } catch (e) {
       print('Erro ao confirmar pedido: $e');
       setState(() {
         _isLoading = false;
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Erro ao confirmar pedido: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erro ao confirmar pedido: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
   void _selectPreviousOrder() {
     if (_pendingOrders.isEmpty) return;
     setState(() {
-      _selectedOrderIndex = (_selectedOrderIndex - 1) % _pendingOrders.length;
-      if (_selectedOrderIndex < 0)
-        _selectedOrderIndex = _pendingOrders.length - 1;
+      _selectedOrderIndex = (_selectedOrderIndex - 1);
+      if (_selectedOrderIndex < 0) _selectedOrderIndex = _pendingOrders.length - 1;
     });
   }
 
@@ -149,8 +199,9 @@ class _KitchenScreenState extends State<KitchenScreen> {
             onPressed: _loadPendingOrders,
           ),
           IconButton(
-            icon: const Icon(Icons.exit_to_app),
-            onPressed: () {
+            icon: const Icon(Icons.logout),
+            onPressed: () async {
+              await Provider.of<ChatbotAuthProvider>(context, listen: false).logout();
               Navigator.pushReplacementNamed(context, '/login');
             },
           ),
@@ -223,8 +274,7 @@ class _KitchenScreenState extends State<KitchenScreen> {
                       ),
 
                     // Detalhes do pedido selecionado
-                    if (_selectedOrderIndex >= 0 &&
-                        _selectedOrderIndex < _pendingOrders.length)
+                    if (_selectedOrderIndex >= 0 && _selectedOrderIndex < _pendingOrders.length)
                       Expanded(
                         child: SingleChildScrollView(
                           padding: const EdgeInsets.all(16.0),
@@ -238,15 +288,18 @@ class _KitchenScreenState extends State<KitchenScreen> {
 
   Widget _buildSelectedOrderCard() {
     final order = _pendingOrders[_selectedOrderIndex];
+
+    // Acessar dados com segurança usando valores padrão definidos no _loadPendingOrders
+    final orderNumber = order['orderNumber'] as int; // Já tratado pela função _parseOrderNumber
     final timestamp = order['timestamp'] as Timestamp?;
     final dateTime = timestamp?.toDate() ?? DateTime.now();
     final formattedDate = DateFormat('dd/MM/yyyy HH:mm').format(dateTime);
-    final ra = _extractRA(order['userEmail'] as String);
-    final items = order['items'] as List<dynamic>;
-    final total = order['total'] as double;
-    final description = order['description'] as String;
-    final orderNumber =
-        (order['orderNumber'] as int).toString().padLeft(3, '0');
+    final email = order['userEmail'] as String; // Já tratado
+    final ra = _extractRA(email);
+    final items = order['items'] as List<Map<String, dynamic>>; // Já tratado
+    final total = order['total'] as double; // Já tratado
+    final description = order['description'] as String; // Já tratado
+    final formattedOrderNumber = orderNumber.toString().padLeft(3, '0'); // Formatar número
 
     return Card(
       elevation: 4.0,
@@ -264,7 +317,7 @@ class _KitchenScreenState extends State<KitchenScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Pedido #$orderNumber',
+                  'Pedido #$formattedOrderNumber', // Usar número formatado
                   style: const TextStyle(
                     fontSize: 20.0,
                     fontWeight: FontWeight.bold,
@@ -285,8 +338,7 @@ class _KitchenScreenState extends State<KitchenScreen> {
 
             // RA do aluno
             Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 12.0, vertical: 6.0),
+              padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 6.0),
               decoration: BoxDecoration(
                 color: Colors.grey[200],
                 borderRadius: BorderRadius.circular(8.0),
@@ -336,9 +388,10 @@ class _KitchenScreenState extends State<KitchenScreen> {
             ),
             const SizedBox(height: 8.0),
             ...items.map((item) {
-              final name = item['name'] as String;
-              final quantity = item['quantity'] as int;
-              final price = (item['price'] as num).toDouble();
+              // Acessar dados do item com segurança
+              final name = item['name'] as String; // Já tratado
+              final quantity = item['quantity'] as int; // Já tratado
+              final price = item['price'] as double; // Já tratado
               final itemTotal = price * quantity;
 
               return Padding(
@@ -346,10 +399,13 @@ class _KitchenScreenState extends State<KitchenScreen> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      '$quantity x $name',
-                      style: const TextStyle(fontSize: 16.0),
+                    Expanded( // Para evitar overflow se o nome for longo
+                      child: Text(
+                        '$quantity x $name',
+                        style: const TextStyle(fontSize: 16.0),
+                      ),
                     ),
+                    const SizedBox(width: 8),
                     Text(
                       'R\$ ${itemTotal.toStringAsFixed(2)}',
                       style: const TextStyle(fontSize: 16.0),
@@ -407,3 +463,4 @@ class _KitchenScreenState extends State<KitchenScreen> {
     );
   }
 }
+

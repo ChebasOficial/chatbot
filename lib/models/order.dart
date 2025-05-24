@@ -38,6 +38,7 @@ class Order {
   double total;
   String status; // 'pending', 'inProgress', 'completed', 'archived'
   String notes; // Observações do pedido
+  String orderNumber; // Número do pedido (000-999)
 
   Order({
     required this.id,
@@ -47,6 +48,7 @@ class Order {
     required this.total,
     required this.status,
     this.notes = '',
+    required this.orderNumber,
   });
 
   // Converter String status para OrderStatus enum
@@ -68,6 +70,7 @@ class Order {
       total: json['total'].toDouble(),
       status: json['status'],
       notes: json['notes'] ?? '',
+      orderNumber: json['orderNumber'] ?? '000',
     );
   }
 
@@ -80,6 +83,7 @@ class Order {
       'total': total,
       'status': status,
       'notes': notes,
+      'orderNumber': orderNumber,
     };
   }
 }
