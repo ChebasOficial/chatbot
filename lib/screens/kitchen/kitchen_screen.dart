@@ -250,9 +250,19 @@ class _KitchenScreenState extends State<KitchenScreen> {
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () async {
+              // 1. Cancelar a assinatura do stream PRIMEIRO
+              _ordersSubscription?.cancel();
+              _ordersSubscription =
+                  null; // Garantir que a referência seja limpa
+
+              // 2. Fazer o logout
               await Provider.of<ChatbotAuthProvider>(context, listen: false)
                   .logout();
-              Navigator.pushReplacementNamed(context, '/login');
+
+              // 3. Navegar (verificando se o widget ainda está montado)
+              if (mounted) {
+                Navigator.pushReplacementNamed(context, '/login');
+              }
             },
           ),
         ],
