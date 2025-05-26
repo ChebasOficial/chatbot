@@ -169,7 +169,7 @@ class _KitchenScreenState extends State<KitchenScreen> {
       appBar: AppBar(
         automaticallyImplyLeading: false, // Remove a seta de voltar
         backgroundColor: PoliedroFoodStyle.primaryBlue,
-        title: const Text('Cozinha - Pedidos Pendentes'),
+        title: const Text('Cozinha'),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
