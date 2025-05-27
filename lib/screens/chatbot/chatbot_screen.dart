@@ -539,6 +539,137 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
     _showOrderSummary();
   }
 
+  // Solicitar ao usuário que adicione uma descrição
+  void _promptForDescription() {
+    _addBotMessage('Por favor, digite a descrição ou observação para o seu pedido:');
+  }
+  
+  // Mostrar opções para editar ou excluir a descrição
+  void _showEditDescriptionOptions() {
+    if (_orderDescription.isEmpty) {
+      _promptForDescription();
+      return;
+    }
+    
+    _addBotMessage('Descrição atual: "$_orderDescription"');
+    
+    // Adicionar botões para modificar ou excluir a descrição
+    Future.delayed(const Duration(milliseconds: 300), () {
+      if (!mounted) return;
+      
+      List<ChatAction> actions = [
+        ChatAction(
+          label: 'Modificar Descrição',
+          action: () {
+            _addBotMessage('Digite a nova descrição para substituir a atual:');
+          },
+        ),
+        ChatAction(
+          label: 'Excluir Descrição',
+          action: () {
+            setState(() {
+              _orderDescription = '';
+            });
+            _addBotMessage('Descrição removida com sucesso!');
+            _showOrderSummary();
+          },
+        ),
+        ChatAction(
+          label: 'Voltar',
+          action: () {
+            _showOrderSummary();
+          },
+        ),
+      ];
+      
+      setState(() {
+        _messages.add(
+          ChatMessage(
+            text: 'O que você deseja fazer com a descrição?',
+            isUser: false,
+            timestamp: DateTime.now(),
+            isActionButtons: true,
+            actions: actions,
+          ),
+        );
+      });
+      
+      // Garantir que a tela role para mostrar os botões
+      _scrollToBottom();
+    });
+  }
+  
+  // Mostrar opções para remover itens do carrinho
+  void _showRemoveItemOptions() {
+    if (_cart.isEmpty) {
+      _addBotMessage('Seu carrinho está vazio. Não há itens para remover.');
+      return;
+    }
+    
+    _addBotMessage('Selecione o item que deseja remover:');
+    
+    // Adicionar botões para cada item no carrinho
+    Future.delayed(const Duration(milliseconds: 300), () {
+      if (!mounted) return;
+      
+      List<ChatAction> actions = [];
+      
+      // Adicionar um botão para cada item no carrinho
+      for (int i = 0; i < _cart.length; i++) {
+        final item = _cart[i];
+        actions.add(
+          ChatAction(
+            label: '${item.quantity}x ${item.menuItem.name}',
+            action: () {
+              _removeItemFromCart(i);
+            },
+          ),
+        );
+      }
+      
+      // Adicionar botão para voltar
+      actions.add(
+        ChatAction(
+          label: 'Voltar',
+          action: () {
+            _showOrderSummary();
+          },
+        ),
+      );
+      
+      setState(() {
+        _messages.add(
+          ChatMessage(
+            text: 'Escolha um item para remover:',
+            isUser: false,
+            timestamp: DateTime.now(),
+            isActionButtons: true,
+            actions: actions,
+          ),
+        );
+      });
+      
+      // Garantir que a tela role para mostrar os botões
+      _scrollToBottom();
+    });
+  }
+  
+  // Remover um item específico do carrinho
+  void _removeItemFromCart(int index) {
+    if (index < 0 || index >= _cart.length) return;
+    
+    final removedItem = _cart[index];
+    
+    setState(() {
+      _cart.removeAt(index);
+    });
+    
+    _addBotMessage('Removi ${removedItem.quantity}x ${removedItem.menuItem.name} do seu pedido.');
+    
+    // Mostrar resumo atualizado
+    _showOrderSummary();
+  }
+
   void _showOrderSummary() {
     if (_cart.isEmpty) {
       _addBotMessage('Seu carrinho está vazio.');
@@ -586,8 +717,34 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
         ChatAction(
           label: 'Adicionar',
           action: () {
-            // Apenas mostrar uma mensagem para adicionar mais itens
+            // Mostrar o cardápio automaticamente ao clicar em adicionar
             _addBotMessage('O que mais você gostaria de adicionar ao seu pedido?');
+            _loadMenu(); // Carregar e exibir o cardápio
+          },
+        ),
+        // Mostrar botão "Adicionar Descrição" apenas se não houver descrição
+        if (_orderDescription.isEmpty)
+          ChatAction(
+            label: 'Adicionar Descrição',
+            action: () {
+              // Solicitar ao usuário que adicione uma descrição
+              _promptForDescription();
+            },
+          ),
+        // Mostrar botão "Editar Descrição" apenas se já houver descrição
+        if (_orderDescription.isNotEmpty)
+          ChatAction(
+            label: 'Editar Descrição',
+            action: () {
+              // Mostrar opções para editar ou excluir a descrição
+              _showEditDescriptionOptions();
+            },
+          ),
+        ChatAction(
+          label: 'Remover Item',
+          action: () {
+            // Mostrar opções para remover itens
+            _showRemoveItemOptions();
           },
         ),
         ChatAction(
@@ -611,6 +768,9 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
           ),
         );
       });
+      
+      // Garantir que a tela role para mostrar os botões
+      _scrollToBottom();
     });
   }
 
@@ -906,19 +1066,21 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
       );
     }
     
-    // Mensagem normal (sem botões)
+    // Mensagem normal (usuário ou bot)
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 4.0),
       child: Row(
-        mainAxisAlignment: message.isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
+        mainAxisAlignment: message.isUser
+            ? MainAxisAlignment.end
+            : MainAxisAlignment.start,
         children: [
           if (!message.isUser) const SizedBox(width: 8.0),
           Flexible(
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
               decoration: BoxDecoration(
-                color: message.isUser 
-                    ? PoliedroFoodStyle.primaryBlue 
+                color: message.isUser
+                    ? PoliedroFoodStyle.primaryBlue
                     : PoliedroFoodStyle.backgroundLight,
                 borderRadius: BorderRadius.circular(20.0),
               ),
@@ -940,12 +1102,12 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
     return Container(
       padding: const EdgeInsets.all(8.0),
       decoration: BoxDecoration(
-        color: PoliedroFoodStyle.backgroundLight,
+        color: Colors.white,
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.1),
             blurRadius: 4.0,
-            offset: const Offset(0, -1),
+            offset: const Offset(0, -2),
           ),
         ],
       ),
@@ -955,94 +1117,38 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
           Expanded(
             child: TextField(
               controller: _messageController,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 hintText: 'Digite sua mensagem...',
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.all(Radius.circular(30.0)),
+                  borderRadius: BorderRadius.circular(24.0),
                   borderSide: BorderSide.none,
                 ),
                 filled: true,
-                fillColor: Colors.white,
-                contentPadding: EdgeInsets.symmetric(horizontal: 16.0),
+                fillColor: PoliedroFoodStyle.backgroundLight,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16.0,
+                  vertical: 8.0,
+                ),
               ),
+              textInputAction: TextInputAction.send,
               onSubmitted: (_) => _handleSendMessage(),
             ),
           ),
-          const SizedBox(width: 8.0),
           // Botão de enviar
           Container(
-            decoration: const BoxDecoration(
+            margin: const EdgeInsets.only(left: 8.0),
+            decoration: BoxDecoration(
               color: PoliedroFoodStyle.primaryBlue,
               shape: BoxShape.circle,
             ),
             child: IconButton(
-              icon: const Icon(Icons.send, color: Colors.white),
+              icon: const Icon(Icons.send),
+              color: Colors.white,
               onPressed: _handleSendMessage,
             ),
           ),
         ],
       ),
-    );
-  }
-
-  // Botões de ação
-  Widget _buildActionButtons() {
-    return Column(
-      children: [
-        if (_cart.isNotEmpty) ...[
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: _confirmOrder,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: PoliedroFoodStyle.primaryBlue,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 16.0),
-              ),
-              child: const Text('Confirmar pedido'),
-            ),
-          ),
-          const SizedBox(height: 8.0),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: () => _addBotMessage('Digite sua observação para o pedido:'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: PoliedroFoodStyle.backgroundLight,
-                foregroundColor: PoliedroFoodStyle.neutralDark,
-                padding: const EdgeInsets.symmetric(vertical: 16.0),
-              ),
-              child: const Text('Adicionar observação'),
-            ),
-          ),
-        ],
-        const SizedBox(height: 8.0),
-        SizedBox(
-          width: double.infinity,
-          child: ElevatedButton(
-            onPressed: _loadMenu,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: PoliedroFoodStyle.backgroundLight,
-              foregroundColor: PoliedroFoodStyle.neutralDark,
-              padding: const EdgeInsets.symmetric(vertical: 16.0),
-            ),
-            child: const Text('Ver cardápio'),
-          ),
-        ),
-        const SizedBox(height: 8.0),
-        SizedBox(
-          width: double.infinity,
-          child: ElevatedButton(
-            onPressed: _showLogoutConfirmation,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: PoliedroFoodStyle.errorRed,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 16.0),
-            ),
-            child: const Text('Sair'),
-          ),
-        ),
-      ],
     );
   }
 }
