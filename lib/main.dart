@@ -54,7 +54,7 @@ class _MyAppState extends State<MyApp> {
       await _orderProvider.initialize();
       // Não chamar initialize no MenuProvider pois ele não tem esse método
       // O carregamento dos itens do menu é feito sob demanda
-      
+
       if (mounted) {
         setState(() {
           _isInitialized = true;
@@ -113,15 +113,18 @@ class _MyAppState extends State<MyApp> {
           '/kitchen': (context) => const KitchenScreen(),
           '/confirmation': (context) {
             // Obter argumentos da navegação, se disponíveis
-            final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
-            
+            final args = ModalRoute.of(context)?.settings.arguments
+                as Map<String, dynamic>?;
+
             // Usar valores dos argumentos ou valores padrão
             return ConfirmationScreen(
               title: args?['title'] ?? 'Pedido Confirmado!',
-              message: args?['message'] ?? 'Seu pedido foi registrado com sucesso.',
+              message:
+                  args?['message'] ?? 'Seu pedido foi registrado com sucesso.',
               buttonText: args?['buttonText'] ?? 'Voltar',
-              onConfirm: args?['onConfirm'] as VoidCallback? ?? 
-                         (() => Navigator.of(context).pushReplacementNamed('/chatbot')),
+              onConfirm: args?['onConfirm'] as VoidCallback? ??
+                  (() =>
+                      Navigator.of(context).pushReplacementNamed('/chatbot')),
             );
           },
         },
