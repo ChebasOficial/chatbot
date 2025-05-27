@@ -36,7 +36,7 @@ class ConfirmationScreen extends StatelessWidget {
                 width: 100,
                 height: 100,
                 decoration: BoxDecoration(
-                  color: Colors.grey[800],
+                  color: Colors.green[800],
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(
@@ -46,7 +46,7 @@ class ConfirmationScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 30),
-              
+
               // Título
               Text(
                 title,
@@ -58,7 +58,7 @@ class ConfirmationScreen extends StatelessWidget {
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 20),
-              
+
               // Mensagem
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 40),
@@ -72,7 +72,7 @@ class ConfirmationScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 50),
-              
+
               // Botão de confirmação
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 40),
