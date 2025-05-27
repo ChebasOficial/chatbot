@@ -1,7 +1,8 @@
 import 'package:chatbot/models/order_status.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart'; // Import for keyboard keys
 import 'package:chatbot/config/style_guide.dart';
-import 'package:chatbot/models/order.dart';
+import 'package:chatbot/models/order.dart'; // Certifique-se que PoliedroOrder tem um campo DateTime createdAt
 import 'package:chatbot/providers/order_provider.dart';
 import 'package:provider/provider.dart';
 import 'dart:async';
@@ -14,75 +15,93 @@ class KitchenScreen extends StatefulWidget {
 }
 
 class _KitchenScreenState extends State<KitchenScreen> {
-  int _selectedOrderIndex = -1;
+  int _selectedOrderIndex = 0; // Start with the first item selected
   bool _isLoading = true;
   List<PoliedroOrder> _orders = [];
   Stream<List<PoliedroOrder>>? _ordersStream;
   StreamSubscription<List<PoliedroOrder>>? _ordersSubscription;
 
+  final FocusNode _listFocusNode = FocusNode();
+  final ScrollController _scrollController = ScrollController();
+
   @override
   void initState() {
     super.initState();
-    // Autenticar a cozinha ao iniciar a tela
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final orderProvider = Provider.of<OrderProvider>(context, listen: false);
       orderProvider.authenticateKitchen(true);
       _loadOrders();
+      FocusScope.of(context).requestFocus(_listFocusNode);
     });
   }
 
   @override
   void dispose() {
     _ordersSubscription?.cancel();
+    _listFocusNode.dispose();
+    _scrollController.dispose();
     super.dispose();
+  }
+
+  // Helper function to get sorted pending orders
+  List<PoliedroOrder> _getSortedPendingOrders() {
+    final pending = _orders
+        .where((order) => order.status == OrderStatus.pending.value)
+        .toList();
+    // Ordena do mais antigo para o mais recente (assuming createdAt exists)
+    pending.sort((a, b) => a.timestamp.compareTo(b.timestamp));
+    return pending;
   }
 
   Future<void> _loadOrders() async {
     setState(() {
       _isLoading = true;
+      _selectedOrderIndex = 0;
     });
 
     try {
       final orderProvider = Provider.of<OrderProvider>(context, listen: false);
-
-      // Verificar se o usuário da cozinha está autenticado
       if (!orderProvider.isKitchenAuthenticated) {
-        setState(() {
-          _isLoading = false;
-          _orders = [];
-        });
-        // Optionally show a message
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content:
-                const Text('Erro: Usuário da cozinha não está autenticado.'),
-            backgroundColor: PoliedroFoodStyle.errorRed,
-          ),
-        );
-        return; // Importante: retornar aqui para evitar continuar o carregamento
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+            _orders = [];
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content:
+                  const Text('Erro: Usuário da cozinha não está autenticado.'),
+              backgroundColor: PoliedroFoodStyle.errorRed,
+            ),
+          );
+        }
+        return;
       }
 
-      // Cancel any existing subscription just in case
       _ordersSubscription?.cancel();
-
-      print('KitchenScreen: Iniciando carregamento de pedidos');
-
-      // Get the stream of orders
       _ordersStream = orderProvider.getOrdersStream();
 
-      // Subscribe to the stream
       _ordersSubscription = _ordersStream?.listen((orders) {
         if (mounted) {
-          print('KitchenScreen: Recebidos ${orders.length} pedidos do stream');
-          final pendingOrders = orders
-              .where((order) => order.status == OrderStatus.pending.value)
-              .toList();
-          print(
-              'KitchenScreen: Filtrados ${pendingOrders.length} pedidos pendentes');
+          // Atualiza a lista principal
+          _orders = orders;
+          // Recalcula a lista ordenada de pendentes
+          final sortedPendingOrders = _getSortedPendingOrders();
 
           setState(() {
-            _orders = orders;
             _isLoading = false;
+            // Ajusta o índice selecionado baseado na nova lista ordenada
+            if (_selectedOrderIndex >= sortedPendingOrders.length) {
+              _selectedOrderIndex = sortedPendingOrders.isNotEmpty
+                  ? sortedPendingOrders.length - 1
+                  : -1;
+            }
+            if (sortedPendingOrders.isNotEmpty && _selectedOrderIndex < 0) {
+              _selectedOrderIndex = 0;
+            }
+          });
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _scrollToSelected();
           });
         }
       }, onError: (e) {
@@ -90,6 +109,7 @@ class _KitchenScreenState extends State<KitchenScreen> {
           setState(() {
             _isLoading = false;
             _orders = [];
+            _selectedOrderIndex = -1;
           });
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -112,6 +132,7 @@ class _KitchenScreenState extends State<KitchenScreen> {
         setState(() {
           _isLoading = false;
           _orders = [];
+          _selectedOrderIndex = -1;
         });
         print('Erro ao carregar pedidos: $e');
       }
@@ -119,24 +140,16 @@ class _KitchenScreenState extends State<KitchenScreen> {
   }
 
   Future<void> _confirmOrder(int index) async {
-    // Usar a lista filtrada de pedidos pendentes
-    final pendingOrders = _orders
-        .where((order) => order.status == OrderStatus.pending.value)
-        .toList();
-    if (index < 0 || index >= pendingOrders.length) return;
+    // Usa a lista JÁ ORDENADA para pegar o pedido correto pelo índice
+    final sortedPendingOrders = _getSortedPendingOrders();
+    if (index < 0 || index >= sortedPendingOrders.length) return;
 
-    final order = pendingOrders[index];
+    final order = sortedPendingOrders[index];
     final orderProvider = Provider.of<OrderProvider>(context, listen: false);
 
     try {
       print('Confirmando pedido ${order.id} com status atual: ${order.status}');
       await orderProvider.confirmOrder(order.id);
-
-      // Forçar atualização da lista após confirmação
-      setState(() {
-        // A lista será atualizada automaticamente pelo stream
-      });
-
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -144,6 +157,8 @@ class _KitchenScreenState extends State<KitchenScreen> {
             backgroundColor: PoliedroFoodStyle.neutralDark,
           ),
         );
+        // Foca novamente na lista após a confirmação para continuar navegando
+        FocusScope.of(context).requestFocus(_listFocusNode);
       }
     } catch (e) {
       print('Erro ao confirmar pedido: $e');
@@ -158,16 +173,56 @@ class _KitchenScreenState extends State<KitchenScreen> {
     }
   }
 
+  void _handleKeyEvent(KeyEvent event) {
+    if (event is KeyDownEvent) {
+      // Usa a lista JÁ ORDENADA para navegação
+      final sortedPendingOrders = _getSortedPendingOrders();
+      if (sortedPendingOrders.isEmpty) return;
+
+      int newIndex = _selectedOrderIndex;
+
+      if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+        newIndex = (_selectedOrderIndex + 1) % sortedPendingOrders.length;
+      } else if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
+        newIndex = (_selectedOrderIndex - 1 + sortedPendingOrders.length) %
+            sortedPendingOrders.length;
+      } else if (event.logicalKey == LogicalKeyboardKey.enter ||
+          event.logicalKey == LogicalKeyboardKey.select) {
+        if (_selectedOrderIndex >= 0 &&
+            _selectedOrderIndex < sortedPendingOrders.length) {
+          _confirmOrder(_selectedOrderIndex);
+        }
+        return;
+      }
+
+      if (newIndex != _selectedOrderIndex) {
+        setState(() {
+          _selectedOrderIndex = newIndex;
+        });
+        _scrollToSelected();
+      }
+    }
+  }
+
+  void _scrollToSelected() {
+    if (_selectedOrderIndex < 0 || !_scrollController.hasClients) return;
+    const double itemHeight = 350.0; // Ajuste se necessário
+    final offset = _selectedOrderIndex * itemHeight;
+    _scrollController.animateTo(
+      offset,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    // Filtrar apenas pedidos pendentes
-    final pendingOrders = _orders
-        .where((order) => order.status == OrderStatus.pending.value)
-        .toList();
+    // Obtém a lista de pedidos pendentes JÁ ORDENADA
+    final sortedPendingOrders = _getSortedPendingOrders();
 
     return Scaffold(
       appBar: AppBar(
-        automaticallyImplyLeading: false, // Remove a seta de voltar
+        automaticallyImplyLeading: false,
         backgroundColor: PoliedroFoodStyle.primaryBlue,
         title: const Text('Cozinha'),
         actions: [
@@ -178,41 +233,58 @@ class _KitchenScreenState extends State<KitchenScreen> {
           IconButton(
             icon: const Icon(Icons.exit_to_app, color: PoliedroFoodStyle.white),
             onPressed: () {
+              _listFocusNode.unfocus();
               Navigator.pushReplacementNamed(context, '/login');
             },
           ),
         ],
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : pendingOrders.isEmpty
-              ? const Center(child: Text('Nenhum pedido pendente.'))
-              : ListView.builder(
-                  padding: const EdgeInsets.all(8.0),
-                  itemCount: pendingOrders.length,
-                  itemBuilder: (context, index) {
-                    final order = pendingOrders[index];
-                    return _buildOrderCard(order, index);
-                  },
-                ),
+      body: Focus(
+        focusNode: _listFocusNode,
+        onKeyEvent: (node, event) {
+          _handleKeyEvent(event);
+          return KeyEventResult.handled;
+        },
+        child: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : sortedPendingOrders.isEmpty
+                ? const Center(child: Text('Nenhum pedido pendente.'))
+                : ListView.builder(
+                    controller: _scrollController,
+                    padding: const EdgeInsets.all(8.0),
+                    // Usa a lista ordenada
+                    itemCount: sortedPendingOrders.length,
+                    itemBuilder: (context, index) {
+                      // Pega o pedido da lista ordenada
+                      final order = sortedPendingOrders[index];
+                      // Passa o estado de seleção correto
+                      return _buildOrderCard(
+                          order, index, index == _selectedOrderIndex);
+                    },
+                  ),
+      ),
     );
   }
 
-  Widget _buildOrderCard(PoliedroOrder order, int index) {
-    // Calcular o total do pedido
-    double total = 0;
-    for (var item in order.items) {
-      total += item.price * item.quantity;
-    }
+  Widget _buildOrderCard(PoliedroOrder order, int index, bool isSelected) {
+    double total =
+        order.items.fold(0, (sum, item) => sum + (item.price * item.quantity));
 
     return Card(
       margin: const EdgeInsets.all(8.0),
+      color: isSelected ? PoliedroFoodStyle.primaryBlue.withOpacity(0.1) : null,
+      shape: isSelected
+          ? RoundedRectangleBorder(
+              side: const BorderSide(
+                  color: PoliedroFoodStyle.primaryBlue, width: 2),
+              borderRadius: BorderRadius.circular(4.0),
+            )
+          : null,
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Cabeçalho do pedido
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -222,8 +294,10 @@ class _KitchenScreenState extends State<KitchenScreen> {
                     color: PoliedroFoodStyle.neutralDark,
                   ),
                 ),
+                // Mostra a data formatada do pedido
                 Text(
-                  order.formattedDate,
+                  order
+                      .formattedDate, // Ou use order.createdAt se precisar formatar aqui
                   style: TextStyle(
                     color: Colors.grey[600],
                   ),
@@ -231,29 +305,17 @@ class _KitchenScreenState extends State<KitchenScreen> {
               ],
             ),
             const SizedBox(height: 8.0),
-
-            // Informações do cliente
             Text('RA: ${order.user.ra.replaceAll("@p4ed.com.br", "")}',
                 style: const TextStyle(fontWeight: FontWeight.bold)),
             if (order.user.phone.isNotEmpty)
               Text('Telefone: ${order.user.phone}'),
             const Divider(),
-
-            // Descrição/Observações
             if (order.notes.isNotEmpty) ...[
-              Text(
-                'Observações:',
-                style: PoliedroFoodStyle.subtitleLarge,
-              ),
+              Text('Observações:', style: PoliedroFoodStyle.subtitleLarge),
               Text(order.notes),
               const Divider(),
             ],
-
-            // Lista de itens
-            Text(
-              'Itens:',
-              style: PoliedroFoodStyle.subtitleLarge,
-            ),
+            Text('Itens:', style: PoliedroFoodStyle.subtitleLarge),
             const SizedBox(height: 8.0),
             ...order.items.map((item) {
               return Padding(
@@ -271,29 +333,21 @@ class _KitchenScreenState extends State<KitchenScreen> {
               );
             }).toList(),
             const Divider(),
-
-            // Total
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  'Total:',
-                  style: PoliedroFoodStyle.subtitleLarge,
-                ),
-                Text(
-                  'R\$ ${total.toStringAsFixed(2)}',
-                  style: PoliedroFoodStyle.totalText,
-                ),
+                Text('Total:', style: PoliedroFoodStyle.subtitleLarge),
+                Text('R\$ ${total.toStringAsFixed(2)}',
+                    style: PoliedroFoodStyle.totalText),
               ],
             ),
             const SizedBox(height: 16.0),
-
-            // Botão de confirmar
             Align(
               alignment: Alignment.center,
               child: SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
+                  focusNode: isSelected ? FocusNode(skipTraversal: true) : null,
                   onPressed: () => _confirmOrder(index),
                   icon: const Icon(Icons.check_circle),
                   label: const Text('CONFIRMAR PEDIDO'),
@@ -309,10 +363,5 @@ class _KitchenScreenState extends State<KitchenScreen> {
         ),
       ),
     );
-  }
-
-  // Mantido para compatibilidade, mas não usado mais diretamente
-  Widget _buildOrderDetails(PoliedroOrder order) {
-    return Container(); // Método vazio, não usado mais
   }
 }
