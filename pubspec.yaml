@@ -2,28 +2,36 @@ name: chatbot
 description: Aplicativo de chatbot com autenticação Firebase
 publish_to: 'none'
 version: 1.0.0+1
+
 environment:
   sdk: '>=3.0.0 <4.0.0'
+
 dependencies:
   flutter:
     sdk: flutter
+  
   cupertino_icons: ^1.0.2
   provider: ^6.0.5
   shared_preferences: ^2.2.2
   mask_text_input_formatter: ^2.4.0
-  firebase_core: ^2.32.0
-  firebase_auth: ^4.19.6
-  cloud_firestore: ^4.17.5
-  firebase_storage: ^11.6.5
+  
+  # Firebase Packages Atualizados para as versões "Latest" ou "Resolvable"
+  firebase_core: ^3.13.1       # ATUALIZADO (era ^2.32.0)
+  firebase_auth: ^5.5.4        # ATUALIZADO (era ^4.19.6)
+  cloud_firestore: ^5.6.8      # ATUALIZADO (era ^4.17.5)
+  firebase_storage: ^12.4.6    # ATUALIZADO (era ^11.6.5)
+  
   intl: ^0.18.1
-  image_picker: ^0.8.6
-  uuid: ^3.0.7
-  string_similarity: ^2.0.0 # Adicionado para correspondência flexível
-  flutter_svg: ^2.0.9 # Adicionado para suporte a SVG
+  image_picker: ^0.8.6 # Você pode considerar atualizar este também, o "Latest" era 1.1.2
+  uuid: ^3.0.7         # Você pode considerar atualizar este também, o "Latest" era 4.5.1
+  string_similarity: ^2.0.0
+  flutter_svg: ^2.0.9
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^2.0.0
+  flutter_lints: ^2.0.0 # Você pode considerar atualizar este também, o "Latest" era 5.0.0
+
 flutter:
   uses-material-design: true
   assets:

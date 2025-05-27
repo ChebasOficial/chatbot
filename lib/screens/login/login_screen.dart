@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
-import 'package:chatbot/providers/auth_provider.dart'; // Make sure this path is correct
-import 'package:chatbot/utils/validators.dart'; // Make sure this path is correct
-import 'package:chatbot/models/user.dart'; // Make sure this path is correct
-import 'package:chatbot/config/style_guide.dart'; // Make sure this path is correct
-import 'package:flutter_svg/flutter_svg.dart'; // Make sure this path is correct
+import 'package:chatbot/providers/auth_provider.dart'; // Certifique-se que este caminho está correto
+import 'package:chatbot/utils/validators.dart'; // Certifique-se que este caminho está correto
+import 'package:chatbot/models/user.dart'; // Certifique-se que este caminho está correto
+import 'package:chatbot/config/style_guide.dart'; // Certifique-se que este caminho está correto
+import 'package:flutter_svg/flutter_svg.dart'; // Certifique-se que este caminho está correto
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
@@ -34,25 +34,22 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _login() async {
+    FocusScope.of(context).unfocus();
     if (!_formKey.currentState!.validate()) {
       return;
     }
-
     setState(() {
       _isLoading = true;
       _errorMessage = null;
     });
-
     try {
       final ra = _raController.text.trim();
       final phone = _phoneController.text.trim();
       final user = User(ra: ra, phone: phone);
-
       final authProvider =
           Provider.of<ChatbotAuthProvider>(context, listen: false);
       await authProvider.login(user);
-
-      if (context.mounted) {
+      if (mounted) {
         if (authProvider.isAdminLoggedIn) {
           Navigator.pushReplacementNamed(context, '/admin');
         } else {
@@ -61,9 +58,11 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     } catch (e) {
       String errorMsg = e.toString();
-      setState(() {
-        _errorMessage = errorMsg.replaceAll('Exception: ', '');
-      });
+      if (mounted) {
+        setState(() {
+          _errorMessage = errorMsg.replaceAll('Exception: ', '');
+        });
+      }
       print('Erro durante login na tela: $e');
     } finally {
       if (mounted) {
@@ -77,27 +76,30 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      // *** AJUSTE: Garante que o Scaffold não tenha cor de fundo própria ***
+      backgroundColor: Colors.transparent,
+      resizeToAvoidBottomInset: true,
       body: Container(
+        // *** AJUSTE: Garante que o Container ocupe todo o espaço disponível ***
+        width: double.infinity,
+        height: double.infinity,
         decoration: BoxDecoration(
-          gradient: PoliedroFoodStyle.mainGradient,
+          gradient: PoliedroFoodStyle.mainGradient, // Seu gradiente
         ),
         child: SafeArea(
-          // Remove SingleChildScrollView
-          child: Padding(
+          child: SingleChildScrollView(
             padding: const EdgeInsets.all(PoliedroFoodStyle.spacingL),
-            // Use Column directly and center its content
             child: Column(
-              mainAxisAlignment:
-                  MainAxisAlignment.center, // Center content vertically
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Logo e título (exatamente como no original)
+                // Logo e título
                 Padding(
                   padding: const EdgeInsets.symmetric(
                       vertical: PoliedroFoodStyle.spacingXL),
                   child: Column(
                     children: [
                       SvgPicture.asset(
-                        'lib/images/poliedro_logo.svg',
+                        'lib/images/poliedro_logo.svg', // Verifique o caminho
                         height: 80,
                         fit: BoxFit.contain,
                       ),
@@ -117,7 +119,8 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
                 const SizedBox(height: PoliedroFoodStyle.spacingL),
-                // Formulário de login (exatamente como no original)
+
+                // Formulário de login
                 Container(
                   decoration: PoliedroFoodStyle.cardDecoration,
                   child: Padding(
@@ -126,8 +129,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       key: _formKey,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
-                        mainAxisSize: MainAxisSize
-                            .min, // Prevent inner column from expanding unnecessarily
+                        mainAxisSize: MainAxisSize.min,
                         children: [
                           const Text(
                             'Acesso ao Chatbot',
@@ -195,9 +197,12 @@ class _LoginScreenState extends State<LoginScreen> {
                           const SizedBox(height: PoliedroFoodStyle.spacingM),
                           TextButton(
                             style: PoliedroFoodStyle.textButtonStyle,
-                            onPressed: () {
-                              Navigator.pushNamed(context, '/admin-login');
-                            },
+                            onPressed: _isLoading
+                                ? null
+                                : () {
+                                    Navigator.pushNamed(
+                                        context, '/admin-login');
+                                  },
                             child: const Text('Acesso Administrativo'),
                           ),
                         ],
@@ -205,6 +210,9 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
                 ),
+                // Espaço extra no final para garantir que o último elemento
+                // possa rolar completamente para cima do teclado, se necessário.
+                const SizedBox(height: PoliedroFoodStyle.spacingXL),
               ],
             ),
           ),
