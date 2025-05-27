@@ -233,7 +233,7 @@ class _KitchenScreenState extends State<KitchenScreen> {
             const SizedBox(height: 8.0),
 
             // Informações do cliente
-            Text('RA: ${order.user.ra}',
+            Text('RA: ${order.user.ra.replaceAll("@p4ed.com.br", "")}',
                 style: const TextStyle(fontWeight: FontWeight.bold)),
             if (order.user.phone.isNotEmpty)
               Text('Telefone: ${order.user.phone}'),
