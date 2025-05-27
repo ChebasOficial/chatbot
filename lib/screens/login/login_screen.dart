@@ -1,13 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
-import 'package:chatbot/providers/auth_provider.dart';
-import 'package:chatbot/utils/validators.dart';
-import 'package:chatbot/widgets/custom_button.dart';
-import 'package:chatbot/widgets/custom_text_field.dart';
-import 'package:chatbot/models/user.dart';
-import 'package:chatbot/config/style_guide.dart';
-import 'package:flutter_svg/flutter_svg.dart';
+import 'package:chatbot/providers/auth_provider.dart'; // Make sure this path is correct
+import 'package:chatbot/utils/validators.dart'; // Make sure this path is correct
+import 'package:chatbot/models/user.dart'; // Make sure this path is correct
+import 'package:chatbot/config/style_guide.dart'; // Make sure this path is correct
+import 'package:flutter_svg/flutter_svg.dart'; // Make sure this path is correct
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
@@ -36,50 +34,38 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _login() async {
-    // Validar formulário
     if (!_formKey.currentState!.validate()) {
       return;
     }
 
-    // Mostrar loading
     setState(() {
       _isLoading = true;
       _errorMessage = null;
     });
 
     try {
-      // Obter dados do formulário
       final ra = _raController.text.trim();
       final phone = _phoneController.text.trim();
-
-      // Criar objeto User para passar ao provider
       final user = User(ra: ra, phone: phone);
 
-      // Fazer login no provider
       final authProvider =
           Provider.of<ChatbotAuthProvider>(context, listen: false);
       await authProvider.login(user);
 
-      // Navegar para a tela apropriada com base no tipo de usuário
       if (context.mounted) {
         if (authProvider.isAdminLoggedIn) {
-          // Se for admin, ir para a tela de gerenciamento
           Navigator.pushReplacementNamed(context, '/admin');
         } else {
-          // Se for aluno, ir para a tela de chatbot
           Navigator.pushReplacementNamed(context, '/chatbot');
         }
       }
     } catch (e) {
-      // Mostrar erro se ocorrer
       String errorMsg = e.toString();
-
       setState(() {
         _errorMessage = errorMsg.replaceAll('Exception: ', '');
       });
       print('Erro durante login na tela: $e');
     } finally {
-      // Esconder loading
       if (mounted) {
         setState(() {
           _isLoading = false;
@@ -96,13 +82,18 @@ class _LoginScreenState extends State<LoginScreen> {
           gradient: PoliedroFoodStyle.mainGradient,
         ),
         child: SafeArea(
-          child: SingleChildScrollView(
+          // Remove SingleChildScrollView
+          child: Padding(
             padding: const EdgeInsets.all(PoliedroFoodStyle.spacingL),
+            // Use Column directly and center its content
             child: Column(
+              mainAxisAlignment:
+                  MainAxisAlignment.center, // Center content vertically
               children: [
-                // Logo e título
+                // Logo e título (exatamente como no original)
                 Padding(
-                  padding: const EdgeInsets.symmetric(vertical: PoliedroFoodStyle.spacingXL),
+                  padding: const EdgeInsets.symmetric(
+                      vertical: PoliedroFoodStyle.spacingXL),
                   child: Column(
                     children: [
                       SvgPicture.asset(
@@ -126,7 +117,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
                 const SizedBox(height: PoliedroFoodStyle.spacingL),
-                // Formulário de login
+                // Formulário de login (exatamente como no original)
                 Container(
                   decoration: PoliedroFoodStyle.cardDecoration,
                   child: Padding(
@@ -135,6 +126,8 @@ class _LoginScreenState extends State<LoginScreen> {
                       key: _formKey,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
+                        mainAxisSize: MainAxisSize
+                            .min, // Prevent inner column from expanding unnecessarily
                         children: [
                           const Text(
                             'Acesso ao Chatbot',
@@ -148,7 +141,6 @@ class _LoginScreenState extends State<LoginScreen> {
                             textAlign: TextAlign.center,
                           ),
                           const SizedBox(height: PoliedroFoodStyle.spacingL),
-                          // Campo de R.A.
                           TextFormField(
                             controller: _raController,
                             decoration: PoliedroFoodStyle.inputDecoration(
@@ -159,8 +151,6 @@ class _LoginScreenState extends State<LoginScreen> {
                             validator: Validators.validateRA,
                             textInputAction: TextInputAction.next,
                           ),
-
-                          // Campo de telefone - sempre visível
                           const SizedBox(height: PoliedroFoodStyle.spacingM),
                           TextFormField(
                             controller: _phoneController,
@@ -176,8 +166,6 @@ class _LoginScreenState extends State<LoginScreen> {
                             onFieldSubmitted: (_) => _login(),
                           ),
                           const SizedBox(height: PoliedroFoodStyle.spacingS),
-
-                          // Mensagem de erro
                           if (_errorMessage != null) ...[
                             const SizedBox(height: PoliedroFoodStyle.spacingM),
                             Text(
@@ -189,9 +177,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               textAlign: TextAlign.center,
                             ),
                           ],
-
                           const SizedBox(height: PoliedroFoodStyle.spacingL),
-                          // Botão de login
                           ElevatedButton(
                             style: PoliedroFoodStyle.primaryButtonStyle,
                             onPressed: _isLoading ? null : _login,
@@ -207,7 +193,6 @@ class _LoginScreenState extends State<LoginScreen> {
                                 : const Text('Continuar'),
                           ),
                           const SizedBox(height: PoliedroFoodStyle.spacingM),
-                          // Link para login administrativo
                           TextButton(
                             style: PoliedroFoodStyle.textButtonStyle,
                             onPressed: () {
