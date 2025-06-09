@@ -1008,6 +1008,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
       appBar: AppBar(
         title: const Text('Poliedro Food'),
         backgroundColor: PoliedroFoodStyle.primaryBlue,
+        automaticallyImplyLeading: false, // Remove a seta de volta
         actions: [
           IconButton(
             icon: const Icon(Icons.exit_to_app),
